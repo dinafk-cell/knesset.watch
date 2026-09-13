@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateApiAuth } from '@/lib/ui/auth-utils';
-import { dbAvailable } from '@/lib/knesset-db';
+import { dbAvailable, hasPolicyAnalysis } from '@/lib/knesset-db';
 import Database from 'better-sqlite3';
 import path from 'path';
 
@@ -28,10 +28,10 @@ export async function GET(request: Request) {
     // Fetch all K25 bills for this person
     const bills = db.prepare(`
       SELECT b.id, b.title, b.is_passed, b.status_id, b.committee_name,
-             a.overall_summary AS summary
+             ${hasPolicyAnalysis() ? 'a.overall_summary' : 'NULL'} AS summary
       FROM bill b
       JOIN bill_initiator i ON i.bill_id = b.id
-      LEFT JOIN bill_policy_analysis a ON a.bill_id = b.id
+      ${hasPolicyAnalysis() ? 'LEFT JOIN bill_policy_analysis a ON a.bill_id = b.id' : ''}
       WHERE i.mk_id = ?
       ORDER BY b.is_passed DESC, b.id DESC
     `).all(personId) as Array<{ id: number; title: string; is_passed: number; status_id: number | null; committee_name: string | null; summary: string | null }>;

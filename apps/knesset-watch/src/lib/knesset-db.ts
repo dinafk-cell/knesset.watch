@@ -1414,9 +1414,9 @@ export function getBills(opts: GetBillsOptions): { bills: BillRow[]; total: numb
     SELECT b.id, b.title, b.subtype, b.is_passed, b.status_desc,
            b.committee_name, b.summary, b.doc_url, b.micro_agenda, b.macro_agenda,
            b.publication_date, b.init_date,
-           a.overall_summary AS analysis_summary
+           ${hasPolicyAnalysis() ? 'a.overall_summary' : 'NULL'} AS analysis_summary
     FROM bill b
-    LEFT JOIN bill_policy_analysis a ON a.bill_id = b.id
+    ${hasPolicyAnalysis() ? 'LEFT JOIN bill_policy_analysis a ON a.bill_id = b.id' : ''}
     ${where}
     ORDER BY b.id DESC LIMIT ? OFFSET ?
   `).all(...params, Math.min(limit, 200), offset) as BillRow[];
@@ -1443,6 +1443,49 @@ export function getBills(opts: GetBillsOptions): { bills: BillRow[]; total: numb
   return { bills, total };
 }
 
+// ── Schema capability probes ────────────────────────────────────────────────
+
+/*
+  knesset-deploy.db, שעליו נבנה הפרודקשן, אינו זהה ל-knesset.db המקומי:
+  חסרות בו bill_policy_analysis, bill_policy_issue ו-bill.text_content.
+  בלי הבדיקות האלה השאילתות זורקות "no such table" ומפילות את העמוד.
+*/
+const _capCache = new Map<string, boolean>();
+
+function hasTable(name: string): boolean {
+  const key = `t:${name}`;
+  if (_capCache.has(key)) return _capCache.get(key)!;
+  const db = getDb();
+  let ok = false;
+  if (db) {
+    try {
+      ok = !!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name = ?`).get(name);
+    } catch { ok = false; }
+  }
+  _capCache.set(key, ok);
+  return ok;
+}
+
+function hasColumn(table: string, column: string): boolean {
+  const key = `c:${table}.${column}`;
+  if (_capCache.has(key)) return _capCache.get(key)!;
+  const db = getDb();
+  let ok = false;
+  if (db) {
+    try {
+      ok = (db.prepare(`SELECT name FROM pragma_table_info(?)`).all(table) as Array<{ name: string }>)
+        .some(r => r.name === column);
+    } catch { ok = false; }
+  }
+  _capCache.set(key, ok);
+  return ok;
+}
+
+/** האם מסד הנתונים הנוכחי נושא את שכבת ניתוח המדיניות */
+export const hasPolicyAnalysis = () => hasTable('bill_policy_analysis');
+export const hasPolicyIssues   = () => hasTable('bill_policy_issue');
+export const hasBillText       = () => hasColumn('bill', 'text_content');
+
 export function getBillById(id: number): BillRow | null {
   const db = getDb();
   if (!db) return null;
@@ -1450,8 +1493,8 @@ export function getBillById(id: number): BillRow | null {
   const bill = db.prepare(`
     SELECT b.id, b.title, b.subtype, b.is_passed, b.status_desc, b.status_id,
            b.committee_name, b.summary, b.doc_url, b.micro_agenda, b.macro_agenda,
-           b.publication_date, b.init_date,
-           b.text_content, b.text_rtl_repaired
+           b.publication_date, b.init_date
+           ${hasBillText() ? ', b.text_content, b.text_rtl_repaired' : ''}
     FROM bill b WHERE b.id = ?
   `).get(id) as BillRow | undefined;
 
@@ -1464,10 +1507,12 @@ export function getBillById(id: number): BillRow | null {
     WHERE i.bill_id = ?
   `).all(id) as BillRow['initiators'];
 
-  const analysis = db.prepare(`
-    SELECT overall_summary, confidence
-    FROM bill_policy_analysis WHERE bill_id = ?
-  `).get(id) as { overall_summary: string | null; confidence: number | null } | undefined;
+  const analysis = hasPolicyAnalysis()
+    ? (db.prepare(`
+        SELECT overall_summary, confidence
+        FROM bill_policy_analysis WHERE bill_id = ?
+      `).get(id) as { overall_summary: string | null; confidence: number | null } | undefined)
+    : undefined;
 
   bill.analysisSummary = analysis?.overall_summary?.trim() || null;
   bill.analysisConfidence = analysis?.confidence ?? null;
@@ -1482,7 +1527,7 @@ export function getBillById(id: number): BillRow | null {
   bill.fullTextChars = text ? text.length : 0;
   bill.rtlRepaired = String(raw.text_rtl_repaired ?? '') === '1';
 
-  bill.issues = (db.prepare(`
+  bill.issues = !hasPolicyIssues() ? [] : (db.prepare(`
     SELECT domain_candidate, issue_candidate, policy_change,
            pro_stance, con_stance, explanation, is_primary
     FROM bill_policy_issue WHERE bill_id = ?
@@ -2038,7 +2083,7 @@ export function getVoteList(opts: GetVoteListOptions = {}): { votes: VoteListRow
            b.id AS bill_id, a.overall_summary AS bill_summary
     FROM plenary_vote v
     LEFT JOIN bill b ON b.id = v.bill_id
-    LEFT JOIN bill_policy_analysis a ON a.bill_id = b.id
+    ${hasPolicyAnalysis() ? 'LEFT JOIN bill_policy_analysis a ON a.bill_id = b.id' : ''}
     ${whereV}
     ORDER BY v.date DESC
     LIMIT ? OFFSET ?
@@ -3311,6 +3356,7 @@ export function countBillsByIssue(issueIds: string[]): Map<string, number> {
 export function getBillSummaries(billIds: number[]): Map<number, string> {
   const db = getDb();
   const out = new Map<number, string>();
+  if (!hasPolicyAnalysis()) return out;
   if (!db || billIds.length === 0) return out;
 
   const holes = billIds.map(() => '?').join(',');
