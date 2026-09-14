@@ -7,9 +7,14 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@minimal-db/ui', '@minimal-db/db'],
   // Prevent Next.js from bundling native modules — they must stay as-is
   serverExternalPackages: ['better-sqlite3'],
-  // Include the SQLite database file in every API route's deployment bundle
+  /*
+    קובץ ה-SQLite חייב להיארז גם לעמודי שרת, לא רק למסלולי API.
+    /bill/[id], /agendas ו-/committee/[name] קוראים מהמסד ישירות
+    ב-server component, ובלי הרשומה הזאת הם נפרסים בלעדיו.
+  */
   outputFileTracingIncludes: {
     '/api/**/*': ['./knesset.db'],
+    '/**/*': ['./knesset.db'],
   },
 };
 

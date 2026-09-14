@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { validateApiAuth } from '@/lib/ui/auth-utils';
-import { dbAvailable } from '@/lib/knesset-db';
+import { dbAvailable, dbPath } from "@/lib/knesset-db";
 import Database from 'better-sqlite3';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), 'knesset.db');
+// הנתיב נפתר מרכזית; cwd של פונקציה סרברלס אינו תיקיית האפליקציה
+const DB_PATH = dbPath() ?? '';
 
 const CODE_TO_DESC: Record<number, string> = {
   6: 'נוכח', 7: 'בעד', 8: 'נגד', 9: 'נמנע',

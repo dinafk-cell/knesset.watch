@@ -13,7 +13,51 @@ import path from 'path';
 import fs from 'fs';
 import { MK_NICKNAMES } from './nicknames';
 
-const DB_PATH = path.join(process.cwd(), 'knesset.db');
+/**
+ * איתור קובץ מסד הנתונים.
+ *
+ * מקומית process.cwd() הוא apps/knesset-watch והקובץ יושב לידו. בפריסה
+ * סרברלס זה לא מתקיים: cwd הוא /var/task, בעוד outputFileTracingIncludes
+ * אורז את הקובץ יחסית לשורש המונורפו — /var/task/apps/knesset-watch.
+ * הנתיבים לא נפגשים, והתוצאה היא 'unable to open database file' בזמן ריצה
+ * בלבד, אחרי בנייה שעברה בהצלחה.
+ *
+ * במקום להמר על פריסה אחת, נבדקות כל האפשרויות הסבירות פעם אחת.
+ */
+function resolveDbPath(): string | null {
+  const candidates = [
+    path.join(process.cwd(), 'knesset.db'),
+    path.join(process.cwd(), 'apps', 'knesset-watch', 'knesset.db'),
+    path.join(process.cwd(), '..', '..', 'knesset.db'),
+  ];
+
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch {
+      // a candidate outside the sandbox throws rather than returning false
+    }
+  }
+  return null;
+}
+
+let _dbPath: string | null | undefined;
+
+/** הנתיב שנמצא, או null. מחושב פעם אחת לתהליך. */
+export function dbPath(): string | null {
+  if (_dbPath === undefined) {
+    _dbPath = resolveDbPath();
+    if (_dbPath === null) {
+      console.error(
+        '[db] knesset.db not found. cwd=' + process.cwd() +
+        '. The file is copied by vercel.json at build time and bundled through' +
+        ' outputFileTracingIncludes; if this fires in production, the traced path' +
+        ' and the runtime cwd have diverged.',
+      );
+    }
+  }
+  return _dbPath;
+}
 
 const CODE_TO_LABEL: Record<number, string> = {
   6: 'נוכח',
@@ -27,14 +71,15 @@ let _db: Database.Database | null = null;
 
 function getDb(): Database.Database | null {
   if (_db) return _db;
-  if (!fs.existsSync(DB_PATH)) return null;
-  _db = new Database(DB_PATH, { readonly: true });
+  const p = dbPath();
+  if (!p) return null;
+  _db = new Database(p, { readonly: true });
   return _db;
 }
 
 /** Whether the local database is available */
 export function dbAvailable(): boolean {
-  return fs.existsSync(DB_PATH);
+  return dbPath() !== null;
 }
 
 export interface MkPerson {

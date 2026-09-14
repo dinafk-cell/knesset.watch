@@ -12,10 +12,10 @@ import {
   getMkWithMajorityVotes,
   getMkAgendaStats,
   getPersonTimeline,
-  dbAvailable,
-} from '@/lib/knesset-db';
+  dbAvailable, dbPath } from "@/lib/knesset-db";
 
-const DB_PATH = path.join(process.cwd(), 'knesset.db');
+// הנתיב נפתר מרכזית; cwd של פונקציה סרברלס אינו תיקיית האפליקציה
+const DB_PATH = dbPath() ?? '';
 export const dynamic = 'force-dynamic';
 
 // Current K25 coalition faction IDs (same source as persons/route.ts)

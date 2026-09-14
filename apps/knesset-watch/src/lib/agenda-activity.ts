@@ -41,6 +41,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import Database from 'better-sqlite3';
+import { dbPath } from '@/lib/knesset-db';
 import path from 'path';
 import fs from 'fs';
 import { POLITICAL_ISSUES } from './canonical-agendas';
@@ -51,7 +52,8 @@ import {
   billAdvanced,
 } from './knesset-db';
 
-const DB_PATH = path.join(process.cwd(), 'knesset.db');
+// הנתיב נפתר מרכזית; cwd של פונקציה סרברלס אינו תיקיית האפליקציה
+const DB_PATH = dbPath() ?? '';
 
 /** משקלות המדד. 60% יוזמה חקיקתית, 40% פעילות בהצבעות */
 const WEIGHT_INITIATIVE = 0.6;
