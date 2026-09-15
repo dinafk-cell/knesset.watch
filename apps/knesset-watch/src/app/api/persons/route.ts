@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { validateApiAuth } from '@/lib/ui/auth-utils';
-import { dbAvailable } from '@/lib/knesset-db';
+import { dbAvailable, dbPath } from "@/lib/knesset-db";
 import Database from 'better-sqlite3';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), 'knesset.db');
+// הנתיב נפתר מרכזית; cwd של פונקציה סרברלס אינו תיקיית האפליקציה
+const DB_PATH = dbPath() ?? '';
 
 const KNESSET_ORIGIN = 'https://knesset.gov.il';
 const PROXY_BASE = (process.env.KNESSET_PROXY_URL ?? KNESSET_ORIGIN) + '/OdataV4/ParliamentInfo';

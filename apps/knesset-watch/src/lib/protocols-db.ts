@@ -725,3 +725,290 @@ export async function searchVotesByVector(
     return [];
   }
 }
+
+// ── Plenary votes ────────────────────────────────────────────────────────────
+
+/**
+ * רשימת הצבעות המליאה מ-Turso.
+ *
+ * knesset.db המקומי עוצר ב-25.2.2026 ואילו Turso מגיע ל-28.7.2026 —
+ * 1,202 הצבעות שלא הופיעו בממשק כלל. הסכמה זהה בשני המסדים, ולכן
+ * הרשימה נקראת מכאן.
+ *
+ * התקצירים נשארים מקומיים: bill_policy_analysis לא קיימת ב-Turso,
+ * ולכן הקורא משלים אותם לפי bill_id אחרי השליפה.
+ */
+export interface TursoVoteRow {
+  voteId: number;
+  title: string;
+  date: string;
+  totalFor: number;
+  totalAgainst: number;
+  totalAbstain: number;
+  isPassed: boolean;
+  margin: number;
+  microAgenda: string | null;
+  macroAgenda: string | null;
+  billId: number | null;
+}
+
+export interface TursoVoteListOptions {
+  passedOnly?: boolean;
+  failedOnly?: boolean;
+  maxMargin?: number;
+  search?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function getVoteListFromTurso(
+  opts: TursoVoteListOptions = {},
+): Promise<{ votes: TursoVoteRow[]; total: number } | null> {
+  const client = getTurso();
+  if (!client) return null;
+
+  const { passedOnly, failedOnly, maxMargin, search, from, to, limit = 50, offset = 0 } = opts;
+  const conds: string[] = [];
+  const args: Array<string | number> = [];
+
+  if (passedOnly) conds.push('is_passed = 1');
+  if (failedOnly) conds.push('is_passed = 0');
+  if (maxMargin !== undefined) { conds.push('ABS(total_for - total_against) <= ?'); args.push(maxMargin); }
+  if (search) { conds.push('title LIKE ?'); args.push(`%${search}%`); }
+  if (from) { conds.push('date >= ?'); args.push(from); }
+  if (to) { conds.push('date <= ?'); args.push(to + 'T23:59:59'); }
+
+  const where = conds.length > 0 ? `WHERE ${conds.join(' AND ')}` : '';
+
+  try {
+    const [countRes, rowsRes] = await Promise.all([
+      client.execute({ sql: `SELECT COUNT(*) AS cnt FROM plenary_vote ${where}`, args }),
+      client.execute({
+        sql: `SELECT id, title, date, total_for, total_against, total_abstain,
+                     is_passed, micro_agenda, macro_agenda, bill_id
+              FROM plenary_vote ${where}
+              ORDER BY date DESC
+              LIMIT ? OFFSET ?`,
+        args: [...args, limit, offset],
+      }),
+    ]);
+
+    const votes: TursoVoteRow[] = rowsRes.rows.map(r => {
+      const forN = Number(r['total_for'] ?? 0);
+      const againstN = Number(r['total_against'] ?? 0);
+      return {
+        voteId: Number(r['id']),
+        title: String(r['title'] ?? ''),
+        date: String(r['date'] ?? ''),
+        totalFor: forN,
+        totalAgainst: againstN,
+        totalAbstain: Number(r['total_abstain'] ?? 0),
+        isPassed: Number(r['is_passed']) === 1,
+        margin: Math.abs(forN - againstN),
+        microAgenda: r['micro_agenda'] != null ? String(r['micro_agenda']) : null,
+        macroAgenda: r['macro_agenda'] != null ? String(r['macro_agenda']) : null,
+        billId: r['bill_id'] != null ? Number(r['bill_id']) : null,
+      };
+    });
+
+    return { votes, total: Number(countRes.rows[0]['cnt'] ?? 0) };
+  } catch {
+    // Turso לא זמין — הקורא נופל חזרה למסד המקומי
+    return null;
+  }
+}
+
+// ── Recently passed bills ────────────────────────────────────────────────────
+
+/**
+ * החוקים האחרונים שהתקבלו, מהמסד המעודכן.
+ * publication_date ב-Turso מגיע ל-26.7.2026 מול 26.3.2026 ב-knesset.db.
+ */
+export async function getRecentPassedBillsFromTurso(
+  opts: { from?: string; to?: string; limit?: number } = {},
+): Promise<{
+  total: number;
+  bills: Array<{ id: number; title: string; date: string }>;
+  newest: string | null;
+} | null> {
+  const client = getTurso();
+  if (!client) return null;
+
+  const { from, to, limit = 8 } = opts;
+  const conds = ['is_passed = 1', 'publication_date IS NOT NULL'];
+  const args: string[] = [];
+  if (from) { conds.push('publication_date >= ?'); args.push(from); }
+  if (to)   { conds.push('publication_date <= ?'); args.push(to); }
+  const where = `WHERE ${conds.join(' AND ')}`;
+
+  try {
+    const [countRes, rowsRes] = await Promise.all([
+      client.execute({ sql: `SELECT COUNT(*) AS cnt FROM bill ${where}`, args }),
+      client.execute({
+        sql: `SELECT id, title, publication_date
+              FROM bill ${where}
+              ORDER BY publication_date DESC, id DESC
+              LIMIT ?`,
+        args: [...args, limit],
+      }),
+    ]);
+
+    const bills = rowsRes.rows.map(r => ({
+      id: Number(r['id']),
+      title: String(r['title'] ?? ''),
+      date: String(r['publication_date'] ?? ''),
+    }));
+
+    return {
+      total: Number(countRes.rows[0]['cnt'] ?? 0),
+      bills,
+      newest: bills[0]?.date ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── Headline counts ──────────────────────────────────────────────────────────
+
+/**
+ * הספירות שמופיעות בדף הבית, מהמסד המעודכן.
+ *
+ * knesset.db המקומי עוצר ב-25.2.2026 ואילו Turso מגיע ל-28.7.2026, ולכן
+ * דף הבית הראה 6,358 הצבעות בזמן שעמוד ההצבעות — שכבר נקרא מ-Turso —
+ * הראה 7,537. שני מספרים לאותו נתון באותו אתר.
+ *
+ * mks נשאר מקומי: mk_person זהה בשני המסדים.
+ */
+export async function getHeadlineCountsFromTurso(
+  from: string,
+  to: string,
+): Promise<{ committees: number; sessions: number; billsPassed: number; billsTotal: number; votes: number } | null> {
+  const client = getTurso();
+  if (!client) return null;
+
+  try {
+    const res = await client.execute({
+      sql: `SELECT
+              (SELECT COUNT(DISTINCT c.name) FROM committee c
+                 JOIN committee_session cs ON cs.committee_id = c.id
+                 WHERE cs.date >= ? AND cs.date <= ?) AS committees,
+              (SELECT COUNT(*) FROM committee_session WHERE date >= ? AND date <= ?) AS sessions,
+              (SELECT COUNT(*) FROM bill WHERE is_passed = 1 AND publication_date >= ? AND publication_date <= ?) AS billsPassed,
+              (SELECT COUNT(*) FROM bill WHERE publication_date >= ? AND publication_date <= ?) AS billsTotal,
+              (SELECT COUNT(*) FROM plenary_vote WHERE date >= ? AND date <= ?) AS votes`,
+      args: [from, to, from, to, from, to, from, to, from, to],
+    });
+
+    const r = res.rows[0];
+    return {
+      committees: Number(r['committees'] ?? 0),
+      sessions: Number(r['sessions'] ?? 0),
+      billsPassed: Number(r['billsPassed'] ?? 0),
+      billsTotal: Number(r['billsTotal'] ?? 0),
+      votes: Number(r['votes'] ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── Vote detail ──────────────────────────────────────────────────────────────
+
+export interface TursoVoteMeta {
+  title: string;
+  date: string;
+  totalFor: number;
+  totalAgainst: number;
+  totalAbstain: number;
+  isPassed: boolean;
+  microAgenda: string | null;
+  macroAgenda: string | null;
+}
+
+export interface TursoVoteResult {
+  mkId: number;
+  resultCode: number;
+  slug: string | null;
+  firstName: string;
+  lastName: string;
+  factionName: string | null;
+  isCoalition: number | null;
+}
+
+/**
+ * הצבעה בודדת מהמסד המעודכן.
+ *
+ * רשימת ההצבעות עברה ל-Turso ומציגה 1,202 הצבעות שאינן ב-knesset.db
+ * המקומי. בלי הנפילה הזאת, לחיצה על 1,179 מהן החזירה 404 — הרשימה
+ * הציעה שורות שאי אפשר לפתוח.
+ *
+ * השאילתות מראות את המקומיות ב-knesset-db, כולל גזירת הקואליציה לפי
+ * התאריך מ-faction_coalition_history.
+ */
+export async function getVoteDetailFromTurso(
+  voteId: number,
+): Promise<{ meta: TursoVoteMeta; results: TursoVoteResult[] } | null> {
+  const client = getTurso();
+  if (!client) return null;
+
+  try {
+    const [metaRes, resultsRes] = await Promise.all([
+      client.execute({
+        sql: `SELECT title, date, total_for, total_against, total_abstain,
+                     is_passed, micro_agenda, macro_agenda
+              FROM plenary_vote WHERE id = ?`,
+        args: [voteId],
+      }),
+      client.execute({
+        sql: `SELECT r.mk_id AS mkId, r.result_code AS resultCode, p.slug,
+                     p.first_name AS firstName, p.last_name AS lastName,
+                     p.faction_name AS factionName,
+                     COALESCE(
+                       (SELECT fch.is_coalition
+                        FROM faction_coalition_history fch
+                        WHERE fch.faction_id = p.faction_id
+                          AND fch.from_date <= date(pv.date)
+                          AND (fch.to_date IS NULL OR fch.to_date > date(pv.date))
+                        ORDER BY fch.from_date DESC
+                        LIMIT 1),
+                       p.is_coalition
+                     ) AS isCoalition
+              FROM mk_vote_result r
+              LEFT JOIN mk_person p ON p.person_id = r.mk_id
+              JOIN plenary_vote pv ON pv.id = r.vote_id
+              WHERE r.vote_id = ?`,
+        args: [voteId],
+      }),
+    ]);
+
+    if (metaRes.rows.length === 0) return null;
+    const m = metaRes.rows[0];
+
+    return {
+      meta: {
+        title: String(m['title'] ?? ''),
+        date: String(m['date'] ?? ''),
+        totalFor: Number(m['total_for'] ?? 0),
+        totalAgainst: Number(m['total_against'] ?? 0),
+        totalAbstain: Number(m['total_abstain'] ?? 0),
+        isPassed: Number(m['is_passed']) === 1,
+        microAgenda: m['micro_agenda'] != null ? String(m['micro_agenda']) : null,
+        macroAgenda: m['macro_agenda'] != null ? String(m['macro_agenda']) : null,
+      },
+      results: resultsRes.rows.map(r => ({
+        mkId: Number(r['mkId']),
+        resultCode: Number(r['resultCode']),
+        slug: r['slug'] != null ? String(r['slug']) : null,
+        firstName: String(r['firstName'] ?? ''),
+        lastName: String(r['lastName'] ?? ''),
+        factionName: r['factionName'] != null ? String(r['factionName']) : null,
+        isCoalition: r['isCoalition'] != null ? Number(r['isCoalition']) : null,
+      })),
+    };
+  } catch {
+    return null;
+  }
+}

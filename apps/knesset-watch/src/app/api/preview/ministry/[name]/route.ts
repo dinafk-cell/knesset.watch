@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { dbPath } from '@/lib/knesset-db';
 import { validateApiAuth } from '@/lib/ui/auth-utils';
 import Database from 'better-sqlite3';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), 'knesset.db');
+// הנתיב נפתר מרכזית; cwd של פונקציה סרברלס אינו תיקיית האפליקציה
+const DB_PATH = dbPath() ?? '';
 
 export async function GET(
   request: Request,
