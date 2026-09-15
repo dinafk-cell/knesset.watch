@@ -70,10 +70,15 @@
 
   /* ── טיפוגרפיה ───────────────────────────────────────────────────────── */
 
-  /* ממשק: כפתורים, תוויות, פקדים, מספרים */
-  --font-sans:  var(--font-heebo), "Segoe UI", "Arial Hebrew", system-ui, sans-serif;
-  /* תוכן: כותרות, שמות ח"כים, כותרות חוקים, פרוזה */
-  --font-serif: var(--font-frank-ruhl), var(--font-source-serif), Georgia, serif;
+  /* ממשק וגוף התוכן — כל מה שקוראים */
+  --font-sans:    var(--font-assistant), "Segoe UI", "Arial Hebrew", system-ui, sans-serif;
+  /*
+    כותרות. הטוקן נקרא display ולא serif כי הוא כבר לא סריף —
+    ההיררכיה עוברת עכשיו דרך משקל וגודל, לא דרך ניגוד משפחות.
+  */
+  --font-display: var(--font-rubik), "Segoe UI", "Arial Hebrew", system-ui, sans-serif;
+  /* תאימות לאחור: font-serif ו-.font-content ממופים ל-display */
+  --font-serif:   var(--font-display);
 
   /* סקאלה בשש דרגות. מחליפה 395 שימושים בגדלים שרירותיים. */
   --text-meta:    0.78125rem;  /* 12.5px — מטא, הכי קטן שמותר */
@@ -111,8 +116,8 @@
     זה מה שמייצר את ההיררכיה שחסרה כשהכול היה serif במשקל 900.
   */
   h1, h2, h3, h4 {
-    font-family: var(--font-serif);
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-weight: 600;
     letter-spacing: -0.01em;
     text-wrap: balance;
   }
@@ -148,7 +153,7 @@
 
 @layer utilities {
   /* תוכן שצריך serif בתוך גוף שהוא sans */
-  .font-content { font-family: var(--font-serif); }
+  .font-content { font-family: var(--font-display); }
 
   /*
     עברית אינה מקבלת ריווח אותיות ואין לה אותיות רישיות.

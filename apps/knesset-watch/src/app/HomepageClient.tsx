@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePeriod, periodToDateRange } from '@/lib/period-context';
 import { CLUSTER_TOPICS } from '@/lib/axis-clusters';
+import { TOPIC_COLOR, TOPIC_FALLBACK } from '@/lib/ui/colors';
+import { Sparkline } from '@/components/Sparkline';
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -21,6 +23,18 @@ const HOME_DOMAIN_PICKS = 3;
  */
 const PICKABLE_DOMAINS = CLUSTER_TOPICS;
 
+/**
+ * שאלות לדוגמה מתחת לתיבת החיפוש.
+ *
+ * תיבת חיפוש ריקה אינה מלמדת מה מותר לשאול, ומי שלא יודע פשוט לא
+ * שואל. שלוש דוגמאות קונקרטיות עושות את זה בשורה אחת.
+ */
+const EXAMPLE_QUERIES = [
+  'כמה ישיבות קיימה ועדת הכספים?',
+  'אילו חוקים עברו בנושא דיור?',
+  'מי יזם הכי הרבה הצעות חוק?',
+];
+
 interface Stats {
   mks: number;
   committees: number;
@@ -28,6 +42,7 @@ interface Stats {
   billsPassed: number;
   billsTotal: number;
   votes: number;
+  trends?: { votes: number[]; billsPassed: number[]; sessions: number[] };
 }
 
 function relativeDate(iso: string | null): string {
@@ -40,6 +55,18 @@ function relativeDate(iso: string | null): string {
   if (diffDays < 30) return `לפני ${Math.floor(diffDays / 7)} שבועות`;
   if (diffDays < 365) return `לפני ${Math.floor(diffDays / 30)} חודשים`;
   return `לפני ${Math.floor(diffDays / 365)} שנים`;
+}
+
+/** כרטיס מספר בראש העמוד. trend ו-series קיימים רק למי שיש לו סדרה חודשית. */
+interface StatCard {
+  href: string;
+  n: string;
+  label: string;
+  sub?: string;
+  trend?: number[];
+  series?: string;
+  /** הזהב שמור לחוקים שעברו — המספר שהאתר קיים בשבילו */
+  gold?: boolean;
 }
 
 interface RecentBill {
@@ -115,42 +142,64 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
   return (
     <div className="min-h-screen" dir="rtl">
       {/*
-        ה-hero כהה. זה מה שנותן לעמוד נקודת פתיחה במקום דף לבן שמתחיל
-        בכותרת, וזה גם מה שמאפשר להשתמש בזהב כטקסט — על הנייבי הוא 6.8:1,
-        על רקע בהיר הוא 2.6:1 ואסור בכל גודל.
+        ה-hero כהה. זה מה שנותן לעמוד נקודת פתיחה במקום דף שמתחיל
+        בכותרת, וזה גם מה שמאפשר להשתמש בזהב כטקסט — על הנייבי הוא
+        6.8:1, על רקע בהיר הוא 2.6:1 ואסור בכל גודל.
       */}
       <div className="bg-navy-deep" data-surface="dark">
-        <div className="max-w-3xl mx-auto px-6 pt-16 pb-12 text-center">
+        <div className="max-w-3xl mx-auto px-6 pt-14 pb-12">
+          <p className="flex items-center gap-2 text-meta text-navy-mute mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-lit" aria-hidden="true" />
+            הכנסת ה-25
+          </p>
+
           <h1 className="text-page sm:text-5xl text-white mb-3">אפרכסת לכנסת</h1>
-          <p className="text-body text-navy-soft mb-10 max-w-xl mx-auto">
-            שקיפות נתוני הכנסת ה-25 — הצבעות, פרוטוקולים, חוקים, ח&quot;כים וועדות במקום אחד.
+          <p className="text-body text-navy-soft mb-8 max-w-xl">
+            הצבעות, פרוטוקולים, חוקים, ח&quot;כים וועדות — כל הנתונים של הכנסת ה-25 במקום אחד.
           </p>
 
           {aiEnabled && (
-          <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl mx-auto">
-            <div className="flex-1 flex items-center border border-white/20 rounded-control px-4 py-3 bg-white/10 focus-within:border-accent-lit transition-colors">
-              <svg className="w-4 h-4 text-navy-mute shrink-0 ml-2" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <circle cx="6.5" cy="6.5" r="4.5"/><path d="m10 10 4 4"/>
-              </svg>
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="שאלו שאלה על פעילות הכנסת..."
-                aria-label="חיפוש בפעילות הכנסת"
-                className="flex-1 bg-transparent text-ui text-white placeholder:text-navy-mute"
-                dir="rtl"
-              />
+          <>
+            <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl">
+              <div className="flex-1 flex items-center border border-white/20 rounded-control px-4 py-3 bg-white/10 focus-within:border-accent-lit transition-colors">
+                <svg className="w-4 h-4 text-navy-mute shrink-0 ml-2" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="6.5" cy="6.5" r="4.5"/><path d="m10 10 4 4"/>
+                </svg>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="שאלו שאלה על פעילות הכנסת..."
+                  aria-label="חיפוש בפעילות הכנסת"
+                  className="flex-1 bg-transparent text-ui text-white placeholder:text-navy-mute"
+                  dir="rtl"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={query.trim().length < 2}
+                className="px-5 py-3 rounded-control bg-accent-lit text-navy-deep text-ui font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors shrink-0"
+              >
+                שאל
+              </button>
+            </form>
+
+            {/* מה מותר לשאול. תיבה ריקה לא מלמדת את זה. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 max-w-xl">
+              <span className="text-meta text-navy-mute">לדוגמה:</span>
+              {EXAMPLE_QUERIES.map(q => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => { setQuery(q); inputRef.current?.focus(); }}
+                  className="text-meta text-navy-soft underline underline-offset-2 hover:text-accent-lit transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
             </div>
-            <button
-              type="submit"
-              disabled={query.trim().length < 2}
-              className="px-5 py-3 rounded-control bg-accent-lit text-navy-deep text-ui font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface transition-colors shrink-0"
-            >
-              שאל
-            </button>
-          </form>
+          </>
           )}
         </div>
       </div>
@@ -166,26 +215,43 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
         </div>
       )}
 
-      {/* המספרים. כל אחד הוא קישור למקום שבו אפשר לבדוק אותו. */}
+      {/*
+        המספרים. כל כרטיס הוא קישור למקום שבו אפשר לבדוק אותו, ומי
+        שיש לו סדרה חודשית מקבל גם גרף זעיר — המספר לבדו לא אומר אם
+        הקצב עולה או יורד.
+      */}
       {stats && (
-        <div className="max-w-3xl mx-auto px-6 mt-12 mb-14">
+        <div className="max-w-3xl mx-auto px-6 mt-10 mb-14">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { href: '/mks', n: stats.mks.toLocaleString(), label: 'ח"כים' },
-              { href: '/committees', n: stats.committees.toLocaleString(), label: 'ועדות',
-                sub: `${stats.sessions.toLocaleString()} ישיבות` },
+            {([
+              { href: '/votes', n: stats.votes?.toLocaleString() ?? '—', label: 'הצבעות מליאה',
+                sub: 'במליאת הכנסת', trend: stats.trends?.votes, series: 'הצבעות' },
               { href: '/bills?passedOnly=true', n: stats.billsPassed.toLocaleString(), label: 'חוקים עברו',
-                sub: stats.billsTotal > 0 ? `מתוך ${stats.billsTotal.toLocaleString()} הצ"ח` : undefined },
-              { href: '/votes', n: stats.votes?.toLocaleString() ?? '—', label: 'הצבעות מליאה' },
-            ].map(c => (
+                sub: stats.billsTotal > 0 ? `מתוך ${stats.billsTotal.toLocaleString()} הצעות` : undefined,
+                trend: stats.trends?.billsPassed, series: 'חוקים שעברו', gold: true },
+              { href: '/committees', n: stats.committees.toLocaleString(), label: 'ועדות פעילות',
+                sub: `${stats.sessions.toLocaleString()} ישיבות`, trend: stats.trends?.sessions, series: 'ישיבות ועדה' },
+              { href: '/mks', n: stats.mks.toLocaleString(), label: 'חברי כנסת',
+                sub: 'מכהנים כעת' },
+            ] as StatCard[]).map(c => (
               <Link
                 key={c.href}
                 href={c.href}
-                className="rounded-card border border-line bg-surface p-5 text-center transition-colors hover:border-accent-lit hover:bg-surface-2"
+                className="flex flex-col rounded-card border border-line bg-surface p-4 transition-colors hover:border-accent-lit hover:bg-surface-2"
               >
-                <div className="text-3xl font-sans font-bold text-ink" data-numeric>{c.n}</div>
-                <div className="text-meta font-medium text-ink-2 mt-1">{c.label}</div>
-                {c.sub && <div className="text-meta text-mute mt-0.5">{c.sub}</div>}
+                <span className="text-meta text-mute">{c.label}</span>
+                <span
+                  className={`text-3xl font-display font-semibold leading-tight mt-1 ${c.gold ? 'text-accent' : 'text-ink'}`}
+                  data-numeric
+                >
+                  {c.n}
+                </span>
+                {c.trend && c.trend.length > 1 && (
+                  <span className={`mt-2 ${c.gold ? 'text-accent-lit' : 'text-mute'}`}>
+                    <Sparkline values={c.trend} label={c.series ?? c.label} />
+                  </span>
+                )}
+                {c.sub && <span className="text-meta text-mute mt-2">{c.sub}</span>}
               </Link>
             ))}
           </div>
@@ -197,30 +263,43 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
         <div className="rounded-card border border-accent-lit bg-accent-wash p-6">
           <p className="text-meta font-medium text-accent-ink mb-1">מי עובד בשבילך</p>
           <h2 className="text-section mb-1">בחרי עד שלושה תחומים שחשובים לך</h2>
-          <p className="text-ui text-ink-2 mb-4">
+          <p className="text-ui text-ink-2 mb-5">
             נשאל אותך מה העמדה שלך בכל נושא, ונדרג את חברי הכנסת לפי מידת הפעילות שלהם —
             הצעות חוק שיזמו והצבעות שתמכו בהן.
           </p>
 
-          <div className="flex flex-wrap gap-2" role="group" aria-label="בחירת תחומים">
+          {/*
+            לכל תחום נקודה בצבע שלו. הצבע אינו קישוט: אותו תחום מקבל
+            אותו גוון בשאלון, בתרשים ובכרטיסים, כדי שאפשר יהיה לעקוב
+            אחריו בין מסכים בלי לקרוא את התווית בכל פעם.
+          */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="group" aria-label="בחירת תחומים">
             {PICKABLE_DOMAINS.map(d => {
               const selected = homeDomains.includes(d.id);
               const full = homeDomains.length >= HOME_DOMAIN_PICKS && !selected;
+              const dot = TOPIC_COLOR[d.label] ?? TOPIC_FALLBACK;
               return (
                 <button
                   key={d.id}
                   onClick={() => toggleHomeDomain(d.id)}
                   disabled={full}
                   aria-pressed={selected}
-                  className={`text-label font-medium px-3 py-2 rounded-control border transition-colors ${
+                  className={`flex items-center gap-2.5 text-right text-ui px-3 py-2.5 rounded-control border transition-colors ${
                     selected
-                      ? 'border-accent bg-accent text-white'
+                      ? 'border-accent bg-surface text-ink font-medium'
                       : full
                         ? 'border-line bg-surface text-mute opacity-50 cursor-not-allowed'
                         : 'border-line bg-surface text-ink-2 hover:border-accent hover:text-ink'
                   }`}
                 >
-                  {d.label}
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: dot }}
+                    aria-hidden="true"
+                  />
+                  <span className="flex-1">{d.label}</span>
+                  {/* הסימון נוסף לצבע ולמסגרת — צבע לבדו אינו מצב */}
+                  {selected && <span className="text-accent shrink-0" aria-hidden="true">✓</span>}
                 </button>
               );
             })}
@@ -228,8 +307,9 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
 
           <div className="flex items-center gap-3 mt-5 flex-wrap">
             {/*
-              הכפתור הראשי נייבי ולא זהב. בעיצוב המקורי הוא היה זהב על קלף,
-              1.58:1 — הפעולה הראשית בעמוד הייתה הדבר הכי קשה לקריאה בו.
+              הכפתור הראשי נייבי ולא זהב. בעיצוב המקורי הוא היה זהב על
+              קלף, 1.58:1 — הפעולה הראשית בעמוד הייתה הדבר הכי קשה
+              לקריאה בו.
             */}
             <button
               onClick={startQuestionnaire}
@@ -240,7 +320,7 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
             </button>
             <span className="text-label text-ink-2">
               {homeDomains.length > 0
-                ? `נבחרו ${homeDomains.length} מתוך ${HOME_DOMAIN_PICKS}`
+                ? `${homeDomains.length === 1 ? 'נבחר תחום אחד' : `נבחרו ${homeDomains.length} תחומים`} מתוך ${HOME_DOMAIN_PICKS}`
                 : `בחרי עד ${HOME_DOMAIN_PICKS} תחומים כדי להתחיל`}
             </span>
           </div>
@@ -293,7 +373,7 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
               >
                 <span className="shrink-0 text-meta font-medium bg-pass-wash text-pass px-2 py-0.5 rounded-control mt-0.5">עבר</span>
                 <div className="flex-1 min-w-0">
-                  <div className="font-content text-ui font-bold text-ink leading-snug line-clamp-2">{b.title}</div>
+                  <div className="text-ui font-medium text-ink leading-snug line-clamp-2">{b.title}</div>
                   <div className="flex items-center gap-2 mt-0.5">
                     {b.date && <span className="text-meta text-mute">{relativeDate(b.date)}</span>}
                     {b.macroAgenda && (

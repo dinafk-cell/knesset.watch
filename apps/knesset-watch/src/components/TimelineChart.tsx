@@ -2,35 +2,13 @@
 
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { COLOR } from '@/lib/ui/colors';
+import { COLOR, TOPIC_COLOR, TOPIC_FALLBACK } from '@/lib/ui/colors';
 
 interface TimelineChartProps {
   data: { month: string; agenda: string; count: number }[];
 }
 
-/**
- * צבע לכל נושא-על.
- *
- * הפלטה הקודמת הייתה מוקשחת לאחד-עשר שמות נושא שאינם קיימים — הם היו
- * מהטקסונומיה הידנית הישנה, ולכן כל עמודה נפלה לאפור ברירת המחדל. גם
- * ההערות בה היו שגויות: '#f59e0b' סומן Violet והוא כתום, '#ec4899'
- * סומן Amber והוא ורוד.
- *
- * כאן שמונת הנושאים האמיתיים, מ-axis-clusters. תרשים מוערם צריך גוונים
- * שנבדלים זה מזה, ולכן זו המשפחה היחידה באתר שמותר לה לצאת מהשלישייה
- * נייבי-זהב-קלף. הם נבחרו עמומים ובהירות עולה כדי שיישבו על הקלף
- * ושהעמודות ייבדלו גם בהדפסה בגווני אפור.
- */
-const AGENDA_COLORS: Record<string, string> = {
-  'משפט, ממשל ודמוקרטיה':            COLOR.navy,      // #0E2140
-  'כלכלה, מיסים ויוקר המחיה':        '#2E6B45',       // ירוק עמוק
-  'בריאות ורווחה':                   '#7A5195',       // סגול עמום
-  'עבודה, זכויות ושוויון':           '#BC5090',       // ורוד-סגול
-  'חינוך, תרבות ודת':                COLOR.accent,    // #8A6615
-  'ביטחון, חוץ ויחסי ישראל–פלסטינים': '#93331F',       // חמרה
-  'דיור, תחבורה ותשתיות':            '#3D6B8A',       // תכלת עמוק
-  'סביבה, חקלאות ושלטון מקומי':      '#6B7A3D',       // זית
-};
+// הפלטה משותפת עם הצ׳יפים והכרטיסים — ראו lib/ui/colors.ts
 
 export default function TimelineChart({ data }: TimelineChartProps) {
   const { chartData, keys } = useMemo(() => {
@@ -85,7 +63,7 @@ export default function TimelineChart({ data }: TimelineChartProps) {
               borderRadius: '0.75rem',
               border: `1px solid ${COLOR.line}`,
               background: COLOR.surface,
-              fontFamily: 'var(--font-heebo)',
+              fontFamily: 'var(--font-assistant)',
               fontSize: '13px',
               textAlign: 'right',
               direction: 'rtl',
@@ -93,9 +71,9 @@ export default function TimelineChart({ data }: TimelineChartProps) {
             itemStyle={{ fontWeight: 500 }}
           />
           {/* משקל 900 על עברית קטנה סותם את האותיות; 500 מספיק לתווית */}
-          <Legend wrapperStyle={{ fontFamily: 'var(--font-heebo)', fontSize: '12.5px', fontWeight: 500 }} />
+          <Legend wrapperStyle={{ fontFamily: 'var(--font-assistant)', fontSize: '12.5px', fontWeight: 500 }} />
           {keys.map(agenda => (
-            <Bar key={agenda} dataKey={agenda} stackId="a" fill={AGENDA_COLORS[agenda] ?? COLOR.mute} />
+            <Bar key={agenda} dataKey={agenda} stackId="a" fill={TOPIC_COLOR[agenda] ?? TOPIC_FALLBACK} />
           ))}
         </BarChart>
       </ResponsiveContainer>

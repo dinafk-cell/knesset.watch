@@ -789,7 +789,7 @@ export default function KnessetWatchPage() {
   const totalCount    = baseCount;
 
   return (
-    <div className="min-h-screen bg-paper text-ink font-[family-name:var(--font-frank-ruhl)]" dir="rtl">
+    <div className="min-h-screen bg-paper text-ink" dir="rtl">
       {/* ── Mobile top bar (hidden on md+) ── */}
       {/* הכותרת הקבועה והמגירה שהיו כאן הוסרו.
            הן שכפלו את SiteHeader ואת AppSidebar: במובייל נערמו שתי כותרות
