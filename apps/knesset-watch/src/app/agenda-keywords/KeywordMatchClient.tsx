@@ -208,6 +208,9 @@ export default function KeywordMatchClient() {
           מחוון התקדמות עם מצב "הושלם" ולא רק "פעיל". בלי זה המשתמשת
           אינה יודעת כמה נשאר, וזו אחת הסיבות שנוטשים שאלון באמצע.
         */}
+        <p className="text-meta text-mute mb-2">
+          שלב {STEPS.findIndex(x => x.id === step) + 1} מתוך {STEPS.length}
+        </p>
         <div className="flex items-center gap-0 mb-8">
           {STEPS.map((s, i) => {
             const current = STEPS.findIndex(x => x.id === step);
@@ -226,13 +229,14 @@ export default function KeywordMatchClient() {
                     }`}
                   >
                     {/*
-                      הספרה נקראה כמונה תוצאות ולא כמספר שלב, כי השלבים
-                      שהושלמו מציגים ✓ ולכן רק הנוכחי נשא מספר. עכשיו כל
-                      השלבים ממוספרים, וההשלמה מסומנת בצבע ובתווית.
+                      בלי ספרה. ב-RTL היא נצמדה לתווית ונקראה כמונה —
+                      "תוצאות 4" נקרא כמו "4 תוצאות". המיקום בסדרה עולה
+                      מהתוויות עצמן, והמצב מסומן בצורה ובצבע.
                     */}
-                    {i + 1}
+                    <span aria-hidden="true">{done ? '✓' : active ? '●' : ''}</span>
                     <span className="sr-only">
-                      {done ? ' — הושלם' : active ? ' — השלב הנוכחי' : ' — טרם הגיע'}
+                      {`שלב ${i + 1} מתוך ${STEPS.length}`}
+                      {done ? ' — הושלם' : active ? ' — כאן עכשיו' : ' — טרם הגיע'}
                     </span>
                   </span>
                   <span
