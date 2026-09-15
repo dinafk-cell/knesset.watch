@@ -346,30 +346,30 @@ function ForensicInsightsCard({
     : null;
 
   return (
-    <div className="bg-orange-50/50 border border-orange-100 p-6 rounded-card">
-      <div className="text-meta font-medium text-orange-400 mb-4 flex items-center gap-2">
-        <span className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></span>
+    <div className="bg-warn-wash border border-warn/30 p-6 rounded-card">
+      <div className="text-meta font-medium text-ink-2 mb-4 flex items-center gap-2">
+        <span className="w-2 h-2 bg-warn rounded-full" aria-hidden="true"></span>
         ניתוח פורנזי
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-right">
         <div>
           <span className="block text-3xl font-medium text-warn">{rebellions}</span>
-          <span className="text-meta font-medium text-orange-400 leading-tight block mt-1">הצבעות נגד הסיעה</span>
+          <span className="text-meta font-medium text-ink-2 leading-tight block mt-1">הצבעות נגד הסיעה</span>
           {rebellionRate !== null && (
-            <p className="text-meta text-orange-400 mt-1 font-medium">
+            <p className="text-meta text-mute mt-1 font-medium">
               {rebellionRate}% מתוך {totalPartisanVotes.toLocaleString()} הצבעות בעד/נגד
             </p>
           )}
           {rebelledVotes.length > 0 && (
             <button
               onClick={() => setShowRebelled(v => !v)}
-              className="text-meta font-medium text-orange-500 hover:text-warn mt-2 underline underline-offset-2"
+              className="text-meta font-medium text-warn hover:text-accent-ink mt-2 underline underline-offset-2"
             >
               {showRebelled ? '▲ הסתר' : `▼ הצג הצבעות (${rebelledVotes.length})`}
             </button>
           )}
         </div>
-        <div className="border-r border-orange-100 pr-6">
+        <div className="border-r border-warn/30 pr-6">
           <span className="block text-3xl font-medium text-ink">{attendance}</span>
           <span className="text-meta font-medium text-mute leading-tight block mt-1">נוכחות בוועדות</span>
           {attendanceRate !== null ? (
@@ -382,7 +382,7 @@ function ForensicInsightsCard({
         </div>
       </div>
       {showRebelled && rebelledVotes.length > 0 && (
-        <div className="mt-4 border-t border-orange-100 pt-4 flex flex-col gap-1.5">
+        <div className="mt-4 border-t border-warn/30 pt-4 flex flex-col gap-1.5">
           {rebelledVotes.map(v => (
             <Link key={v.voteId} href={`/vote/${v.voteId}`}
               className="flex items-start gap-2 px-3 py-2 rounded-card bg-surface hover:bg-warn-wash transition-colors">
@@ -692,7 +692,7 @@ export default function MKProfileClient({ mkId }: { mkId: string }) {
                     <span className="tabular-nums">{profile.voteStats.total.toLocaleString()} הצבעות</span>
                   )}
                   {profile.voteStats?.absenceCount != null && profile.voteStats.absenceCount > 0 && (
-                    <span className="tabular-nums text-rose-400">{profile.voteStats.absenceCount.toLocaleString()} היעדרויות</span>
+                    <span className="tabular-nums text-fail">{profile.voteStats.absenceCount.toLocaleString()} היעדרויות</span>
                   )}
                   <span className="tabular-nums">{profile.bills.length.toLocaleString()} הצ"ח</span>
                   <span className="tabular-nums">{profile.queries.length.toLocaleString()} שאילתות</span>
@@ -782,7 +782,7 @@ export default function MKProfileClient({ mkId }: { mkId: string }) {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-meta font-medium text-mute">היעדרויות</div>
                         {isHighAbsence && (
-                          <span title="הח״כ חסר מחצי ההצבעות ויותר - נתוני אמינות נמוכים" className="inline-flex items-center gap-1 text-meta font-medium px-2 py-1 rounded bg-red-200 text-fail">
+                          <span title="הח״כ חסר מחצי ההצבעות ויותר - נתוני אמינות נמוכים" className="inline-flex items-center gap-1 text-meta font-medium px-2 py-1 rounded bg-fail-wash text-fail">
                             ⚠ אזהרה
                           </span>
                         )}
@@ -916,7 +916,7 @@ export default function MKProfileClient({ mkId }: { mkId: string }) {
                                 : stage.tone === 'advanced'
                                   ? 'bg-accent'
                                   : stage.tone === 'stopped'
-                                    ? 'bg-red-300'
+                                    ? 'bg-fail'
                                     : 'bg-line'
                             }`}
                           />
@@ -1122,7 +1122,7 @@ export default function MKProfileClient({ mkId }: { mkId: string }) {
                         {/* Vote outcome + date */}
                         <div className="shrink-0 flex flex-col items-end gap-0.5">
                           {v.isPassed !== null && (
-                            <span className={`text-meta font-medium ${v.isPassed ? 'text-accent' : 'text-rose-500'}`}>
+                            <span className={`text-meta font-medium ${v.isPassed ? 'text-pass' : 'text-mute'}`}>
                               {v.isPassed ? 'עבר' : 'נכשל'}
                             </span>
                           )}
@@ -1483,7 +1483,7 @@ export default function MKProfileClient({ mkId }: { mkId: string }) {
                         return (
                           <div key={idx} className="px-4 py-3 rounded-card bg-accent-wash">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-meta font-medium px-2 py-0.5 rounded-full bg-purple-200 text-accent-ink">שינוי סיעה</span>
+                              <span className="text-meta font-medium px-2 py-0.5 rounded-full bg-accent-wash text-accent-ink">שינוי סיעה</span>
                             </div>
                             <p className="text-ui font-bold">{factionName}</p>
                             <p className="text-meta text-mute mt-1">{dateRange}</p>

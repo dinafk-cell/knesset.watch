@@ -303,7 +303,7 @@ export default function CommitteeClient({
                           {b.subtype && <span className="text-meta text-mute">{b.subtype}</span>}
                           <button
                             onClick={() => setActiveTab('sessions')}
-                            className="text-meta font-medium text-accent hover:text-accent-ink border border-line hover:border-indigo-400 px-2 py-1 rounded transition-colors"
+                            className="text-meta font-medium text-accent hover:text-accent-ink border border-line hover:border-accent px-2 py-1 rounded transition-colors"
                           >
                             ← ישיבות
                           </button>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 import { validateApiAuth } from "@/lib/ui/auth-utils";
 import { aiFeaturesEnabled } from "@/lib/feature-flags";
+import { geminiFetch, DailyQuotaError } from "@/lib/gemini-fetch";
 import {
   embedQueryPublic,
   searchProtocols,
@@ -36,6 +37,18 @@ import { rateLimit } from "@/lib/ui/rate-limit";
 import { getTursoClient } from "@/lib/turso-db";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * האם מותר להוציא קריאות עזר ל-Gemini מעבר לתשובה עצמה.
+ *
+ * המסלול החינמי נותן 20 בקשות ליום לכל הפרויקט. עם ארבע קריאות
+ * לשאלה זה חמש שאלות ליום; עם אחת זה עשרים. שכתוב השאילתה, ההקשר
+ * החדשותי והצעות ההמשך הם שיפורים — התשובה עומדת בלעדיהם — ולכן
+ * הם כבויים עד שמישהו משדרג את המסלול.
+ *
+ * להדליק: ASK_AUX_CALLS=true בקובץ הסביבה.
+ */
+const auxCallsEnabled = process.env.ASK_AUX_CALLS === "true";
 
 type SessionSource = {
   type: "session";
@@ -194,26 +207,30 @@ async function* streamGemini(
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY not set");
 
-  const res = await fetch(
+  /*
+    פתיחת הזרם בטוחה לניסיון חוזר: עוד לא נשלח לדפדפן אף תו, ולכן
+    ניסיון שני מתחיל תשובה נקייה ולא ממשיך אחת קטועה.
+    התקרה נדיבה יותר מהשאר — כאן נכתבת התשובה המלאה.
+  */
+  const res = await geminiFetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?key=${key}&alt=sse`,
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: "user", parts: [{ text: userMessage }] }],
-        generationConfig: {
-          maxOutputTokens: 4096,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: userMessage }] }],
+      generationConfig: {
+        maxOutputTokens: 4096,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     },
+    { label: "ask/stream", retries: 3, timeoutMs: 45_000 },
   );
 
   if (!res.ok) {
     const err = await res.text();
     console.error("Gemini error:", res.status, err);
     if (res.status === 429) throw new Error("RATE_LIMIT");
+    // 503 ו-429 אחרי הניסיונות פירושם עומס אצל ספק המודל, לא תקלה אצלנו
+    if (res.status === 503 || res.status === 504) throw new Error("OVERLOADED");
     throw new Error(`Gemini ${res.status}`);
   }
 
@@ -252,37 +269,41 @@ async function rewriteQueryForSearch(
   query: string,
   mkName?: string,
 ): Promise<string> {
+  if (!auxCallsEnabled) return query;
   const key = process.env.GEMINI_API_KEY;
   if (!key) return query;
   try {
-    const res = await fetch(
+    const res = await geminiFetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text:
-                    `שאילתת חיפוש בנתוני הכנסת: "${query}"${mkName ? ` (ח"כ: ${mkName})` : ""}\n\n` +
-                    `הפק גרסה משופרת לחיפוש סמנטי (שורה אחת, עברית בלבד):\n` +
-                    `• הרחב כינויים לשמות מלאים (ביבי → בנימין נתניהו, גנץ → בני גנץ)\n` +
-                    `• הוסף מונחים רשמיים/חוקיים אם רלוונטיים\n` +
-                    `• הוסף מילה נרדפת אחת לכל היותר לנושא המרכזי\n` +
-                    `• שמור על עצם הנושא — אל תוסיף נושאים חדשים`,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            maxOutputTokens: 60,
-            thinkingConfig: { thinkingBudget: 0 },
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text:
+                  `שאילתת חיפוש בנתוני הכנסת: "${query}"${mkName ? ` (ח"כ: ${mkName})` : ""}\n\n` +
+                  `הפק גרסה משופרת לחיפוש סמנטי (שורה אחת, עברית בלבד):\n` +
+                  `• הרחב כינויים לשמות מלאים (ביבי → בנימין נתניהו, גנץ → בני גנץ)\n` +
+                  `• הוסף מונחים רשמיים/חוקיים אם רלוונטיים\n` +
+                  `• הוסף מילה נרדפת אחת לכל היותר לנושא המרכזי\n` +
+                  `• שמור על עצם הנושא — אל תוסיף נושאים חדשים`,
+              },
+            ],
           },
-        }),
+        ],
+        generationConfig: {
+          maxOutputTokens: 60,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       },
+      /*
+        אפס ניסיונות חוזרים, במכוון. השכתוב הוא שיפור לאיכות החיפוש
+        ולא תנאי לו — אם הוא נכשל נוסעים עם השאלה המקורית. הוא גם
+        חוסם: שום חיפוש לא מתחיל לפני שהוא חוזר. ניסיון שני היה מוסיף
+        שניות לכל שאלה כדי להציל שיפור שממילא אינו הכרחי.
+      */
+      { label: "ask/rewrite", retries: 0, timeoutMs: 3_500 },
     );
     if (!res.ok) return query;
     const data = (await res.json()) as {
@@ -297,34 +318,32 @@ async function rewriteQueryForSearch(
 }
 
 async function generateSuggestions(query: string): Promise<string[]> {
+  if (!auxCallsEnabled) return [];
   const key = process.env.GEMINI_API_KEY;
   if (!key) return [];
   try {
-    const res = await fetch(
+    const res = await geminiFetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text:
-                    `בהתבסס על השאלה הבאה על הכנסת: "${query}"\n` +
-                    `הצע 3 שאלות המשך קצרות ושימושיות בעברית שהמשתמש עשוי לשאול.\n` +
-                    `כל שאלה שורה אחת, ללא מספרים, ללא סימנים.`,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            maxOutputTokens: 160,
-            thinkingConfig: { thinkingBudget: 0 },
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text:
+                  `בהתבסס על השאלה הבאה על הכנסת: "${query}"\n` +
+                  `הצע 3 שאלות המשך קצרות ושימושיות בעברית שהמשתמש עשוי לשאול.\n` +
+                  `כל שאלה שורה אחת, ללא מספרים, ללא סימנים.`,
+              },
+            ],
           },
-        }),
+        ],
+        generationConfig: {
+          maxOutputTokens: 160,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       },
+      { label: "ask/suggest", retries: 1, timeoutMs: 8_000 },
     );
     if (!res.ok) return [];
     const data = (await res.json()) as {
@@ -345,36 +364,34 @@ async function fetchNewsContext(
   topic: string,
   mkName?: string,
 ): Promise<string> {
+  if (!auxCallsEnabled) return "";
   const key = process.env.GEMINI_API_KEY;
   if (!key || !topic) return "";
   const searchQuery = mkName ? `${mkName} ${topic}` : topic;
   try {
-    const res = await fetch(
+    const res = await geminiFetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text:
-                    `חפש ידיעות עדכניות בעברית על: "${searchQuery}". ` +
-                    `סכם ב-3-4 משפטים בלבד: מה הנושא, מה עמד על הפרק בציבור, ומה ההקשר הרלוונטי. ` +
-                    `אל תוסיף מידע מדויק שאינך בטוח בו.`,
-                },
-              ],
-            },
-          ],
-          tools: [{ googleSearch: {} }],
-          generationConfig: {
-            maxOutputTokens: 300,
-            thinkingConfig: { thinkingBudget: 0 },
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text:
+                  `חפש ידיעות עדכניות בעברית על: "${searchQuery}". ` +
+                  `סכם ב-3-4 משפטים בלבד: מה הנושא, מה עמד על הפרק בציבור, ומה ההקשר הרלוונטי. ` +
+                  `אל תוסיף מידע מדויק שאינך בטוח בו.`,
+              },
+            ],
           },
-        }),
+        ],
+        tools: [{ googleSearch: {} }],
+        generationConfig: {
+          maxOutputTokens: 300,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       },
+      { label: "ask/news", retries: 0, timeoutMs: 3_500 },
     );
     if (!res.ok) return "";
     const data = (await res.json()) as {
@@ -646,12 +663,27 @@ export async function GET(req: NextRequest) {
       ? searchVotesByVector(embedding, 15, dateFrom, dateTo).catch(() => [])
       : Promise.resolve([]);
 
-    const newsContextPromise =
+    /*
+      ההקשר החדשותי הוא רקע חיצוני — הפרומפט עצמו אומר שהוא אינו חלק
+      ממאגר הכנסת, והתשובה תקפה גם בלעדיו. ובכל זאת כל הבקשה המתינה לו:
+      הוא יושב בתוך ה-Promise.all שחוסם גם את הצגת המקורות וגם את
+      תחילת התשובה, ועם ניסיונות חוזרים הוא יכול היה להחזיק חצי דקה.
+
+      דדליין קשיח: מה שלא הספיק עד DEADLINE פשוט לא נכנס. הקריאה
+      עצמה ממשיכה ברקע ותיזרק, וזה בסדר — היא חסרת תופעות לוואי.
+    */
+    const NEWS_DEADLINE_MS = 3_500;
+    const newsContextPromise: Promise<string> =
       topicKeywords.length > 0
-        ? fetchNewsContext(
-            topicPhrase || topicKeywords[0],
-            detectedMk?.fullName,
-          )
+        ? Promise.race([
+            fetchNewsContext(
+              topicPhrase || topicKeywords[0],
+              detectedMk?.fullName,
+            ).catch(() => ""),
+            new Promise<string>((resolve) =>
+              setTimeout(() => resolve(""), NEWS_DEADLINE_MS),
+            ),
+          ])
         : Promise.resolve("");
 
     const searchKeywords = stemmedKeywords.length > 0 ? stemmedKeywords : [q];
@@ -925,11 +957,30 @@ export async function GET(req: NextRequest) {
             });
           }
         } catch (e) {
+          /*
+            ההודעה ״שגיאה בשירות ה-AI: Gemini 503״ אמרה למשתמשת את קוד
+            ה-HTTP ולא מה לעשות איתו. אחרי שהניסיונות החוזרים נגמרו,
+            503 ו-504 עדיין פירושם עומס אצל ספק המודל — כלומר ״נסי שוב״
+            הוא באמת העצה הנכונה, ולא ״משהו אצלנו שבור״.
+          */
+          /*
+            שלושה מצבים שונים, ולמשתמשת חשוב מאוד להבדיל ביניהם:
+            מכסה יומית שנגמרה לא תשתחרר בניסיון חוזר, ולומר לה
+            ״נסי שוב בעוד רגע״ זה לשלוח אותה ללחוץ עד מחר.
+          */
           const msg = e instanceof Error ? e.message : String(e);
-          const userMsg =
-            msg === "RATE_LIMIT"
-              ? "שירות ה-AI עמוס כרגע, נסה שוב בעוד כמה שניות"
-              : `שגיאה בשירות ה-AI: ${msg}`;
+          let userMsg: string;
+          if (e instanceof DailyQuotaError) {
+            userMsg =
+              "מכסת השאלות היומית של שירות ה-AI נוצלה. " +
+              "היא מתאפסת מחר — שאר האתר עובד כרגיל.";
+            console.error(`ask: מכסה יומית (${e.quotaValue ?? "?"} בקשות)`);
+          } else if (msg === "RATE_LIMIT" || msg === "OVERLOADED") {
+            userMsg = "שירות ה-AI עמוס כרגע. נסי שוב בעוד רגע — השאלה נשמרה בתיבה.";
+          } else {
+            userMsg = "לא הצלחנו לייצר תשובה כרגע. אפשר לנסות לנסח את השאלה אחרת.";
+            console.error("ask failed:", msg);
+          }
           send({ type: "error", message: userMsg });
         } finally {
           controller.close();

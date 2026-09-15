@@ -9,11 +9,11 @@ interface Props {
 }
 
 const roleTypeColors: Record<string, { badge: string; label: string }> = {
-  pm: { badge: 'bg-purple-200 text-purple-900', label: 'ראש ממשלה' },
+  pm: { badge: 'bg-navy text-white', label: 'ראש ממשלה' },
   'deputy-pm': { badge: 'bg-accent-lit text-accent-ink', label: 'סגן ראש ממשלה' },
-  minister: { badge: 'bg-amber-200 text-warn', label: 'שר' },
+  minister: { badge: 'bg-warn-wash text-warn', label: 'שר' },
   deputy: { badge: 'bg-accent-wash text-accent-ink', label: 'סגן שר' },
-  acting: { badge: 'bg-orange-200 text-orange-900', label: 'שר בשירות חוקי' },
+  acting: { badge: 'bg-surface-2 text-ink-2', label: 'שר בשירות חוקי' },
   other: { badge: 'bg-line text-ink', label: 'אחר' },
 };
 
@@ -201,7 +201,7 @@ export default function OfficeClient({ office, activityJournal }: Props) {
               <p className="text-fail text-meta">מחלוקות גדולות</p>
             </div>
             <div className="bg-warn-wash p-3 rounded border border-warn/30">
-              <p className="font-semibold text-orange-900">{activityJournal.controversyStats.moderate + activityJournal.controversyStats.minor}</p>
+              <p className="font-semibold text-warn">{activityJournal.controversyStats.moderate + activityJournal.controversyStats.minor}</p>
               <p className="text-warn text-meta">מחלוקות קלות/בינוניות</p>
             </div>
             <div className="bg-surface p-3 rounded border border-line">

@@ -140,7 +140,7 @@ function MkCard({ data }: { data: MkPreview }) {
           {data.isCoalition !== null && (
             <Badge label={data.isCoalition ? 'קואליציה' : 'אופוזיציה'} color={data.isCoalition ? 'bg-pass text-white' : 'bg-accent text-white'} />
           )}
-          {data.ministerRole && <Badge label="שר/ה" color="bg-amber-400 text-white" />}
+          {data.ministerRole && <Badge label="שר/ה" color="bg-accent-wash text-accent-ink" />}
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2 border-t border-line-soft pt-3">
@@ -257,7 +257,7 @@ function FactionCard({ data }: { data: FactionPreview }) {
         <Stat label="חברים" value={data.memberCount} />
         <Stat label='הצ"ח' value={data.proposed} />
         <Stat label="עברו" value={data.passed} color="text-accent" />
-        <Stat label="מרד" value={data.rebelRate != null ? `${data.rebelRate}%` : '—'} color="text-orange-500" />
+        <Stat label="מרד" value={data.rebelRate != null ? `${data.rebelRate}%` : '—'} color="text-warn" />
       </div>
     </>
   );
@@ -267,7 +267,7 @@ function MinistryCard({ data }: { data: MinistryPreview }) {
   return (
     <>
       <div className="flex gap-3 items-start mb-3">
-        <Avatar label="מ" colorClass="bg-slate-600" />
+        <Avatar label="מ" colorClass="bg-navy" />
         <div className="min-w-0 flex-1">
           <p className="text-ui font-medium leading-tight line-clamp-2">{data.name}</p>
           {data.currentMinister && <p className="text-meta text-mute mt-0.5">{data.currentMinister}</p>}

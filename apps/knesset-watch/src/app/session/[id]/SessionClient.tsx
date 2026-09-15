@@ -26,7 +26,7 @@ function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, string> = {
     chair: 'bg-navy-deep text-white',
     deputy_chair: 'bg-navy text-white',
-    minister: 'bg-accent-wash text-accent-ink border border-purple-200',
+    minister: 'bg-accent-wash text-accent-ink border border-accent-lit/40',
     visitor: 'bg-accent-wash text-accent border border-line',
     member: 'bg-surface text-ink-2',
   };

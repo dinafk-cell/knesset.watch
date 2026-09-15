@@ -301,7 +301,7 @@ export default function AskClient({ initialQ }: { initialQ: string }) {
         )}
 
         {!loading && !result && !error && submittedQ.length < 2 && (
-          <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-transparent rounded-control border border-line">
+          <div className="mt-4 p-4 bg-gradient-to-br from-accent-wash to-transparent rounded-control border border-line">
             <p className="text-meta font-medium text-mute mb-3">📌 דוגמאות שתוכלו לנסות</p>
             <p className="text-meta text-ink-2 mb-4">לחצו על אחת מהשאלות כדי לראות תשובה:</p>
             <div className="flex flex-col gap-2">

@@ -150,7 +150,7 @@ export default function ProtocolsClient({ committees, aiEnabled }: Props) {
   const highlightSnippet = (snippet: string) =>
     snippet.split(/(<mark>.*?<\/mark>)/g).map((part, i) =>
       part.startsWith('<mark>') ? (
-        <mark key={i} className="bg-yellow-200 rounded px-0.5">{part.replace(/<\/?mark>/g, '')}</mark>
+        <mark key={i} className="bg-accent-lit/40 text-ink rounded px-0.5">{part.replace(/<\/?mark>/g, '')}</mark>
       ) : <span key={i}>{part}</span>
     );
 

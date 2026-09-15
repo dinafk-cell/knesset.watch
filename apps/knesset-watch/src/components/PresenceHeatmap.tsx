@@ -35,8 +35,8 @@ export default function PresenceHeatmap({ mkId }: { mkId: string }) {
         <div className="flex items-center gap-2 text-meta font-medium text-mute">
           <span>נעדר</span>
           <div className="flex gap-1">
-            <span className="w-3 h-3 rounded-control bg-rose-500"></span>
-            <span className="w-3 h-3 rounded-control bg-rose-300"></span>
+            <span className="w-3 h-3 rounded-control bg-fail"></span>
+            <span className="w-3 h-3 rounded-control bg-fail/50"></span>
             <span className="w-3 h-3 rounded-control bg-accent-lit"></span>
             <span className="w-3 h-3 rounded-control bg-accent"></span>
           </div>
@@ -48,8 +48,8 @@ export default function PresenceHeatmap({ mkId }: { mkId: string }) {
         {data.map(day => {
           let color = 'bg-surface'; // Default, no votes
           if (day.total > 0) {
-            if (day.rate === 0) color = 'bg-rose-500';
-            else if (day.rate < 0.5) color = 'bg-rose-300';
+            if (day.rate === 0) color = 'bg-fail';
+            else if (day.rate < 0.5) color = 'bg-fail/50';
             else if (day.rate < 0.9) color = 'bg-accent-lit';
             else color = 'bg-accent';
           }

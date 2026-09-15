@@ -1118,9 +1118,9 @@ export default function KnessetWatchPage() {
                   <Link href={`/mk/${r.id}`} className="text-section font-medium hover:underline">{r.name}</Link>
                   <p className="text-ui text-mute">{r.faction}</p>
                 </div>
-                <div className="text-center bg-warn-wash px-6 py-3 rounded-card border border-orange-100">
+                <div className="text-center bg-warn-wash px-6 py-3 rounded-card border border-warn/30">
                   <span className="block text-section font-medium text-warn">{r.rebellionCount}</span>
-                  <span className="text-meta font-medium text-orange-400">הצבעות נגד הסיעה</span>
+                  <span className="text-meta font-medium text-ink-2">הצבעות נגד הסיעה</span>
                 </div>
               </div>
             ))}
@@ -1277,7 +1277,7 @@ export default function KnessetWatchPage() {
                 <div
                   key={f.name}
                   className={`relative group p-8 rounded-card border shadow-sm hover:border-mute cursor-pointer transition-all flex flex-col min-h-[280px] ${
-                    f.isCoalition ? 'bg-pass-wash border-green-300/50' : 'bg-accent-wash border-accent/50'
+                    f.isCoalition ? 'bg-navy-soft/40 border-navy/20' : 'bg-accent-wash border-accent-lit/60'
                   }`}
                 >
                   <h3 className="text-section font-medium leading-tight mb-2">
@@ -1302,7 +1302,7 @@ export default function KnessetWatchPage() {
                         <span className="text-3xl font-medium text-accent">{f.passedCount}</span>
                       </div>
                       <div className="flex flex-col border-r border-line-soft pr-3">
-                        <span className="text-meta font-medium text-rose-400 mb-1">מורדות</span>
+                        <span className="text-meta font-medium text-ink-2 mb-1">מורדות</span>
                         <span className="text-3xl font-medium text-fail">{f.totalRebels || 0}</span>
                       </div>
                     </div>
@@ -1426,9 +1426,9 @@ export default function KnessetWatchPage() {
                 const cardBg = isMixed
                   ? 'border border-line'
                   : party.IsCoalition === true
-                    ? 'bg-pass-wash border-green-300/50'
+                    ? 'bg-navy-soft/40 border-navy/20'
                     : party.IsCoalition === false
-                      ? 'bg-accent-wash border-accent/50'
+                      ? 'bg-accent-wash border-accent-lit/60'
                       : 'bg-surface border-line';
                 return (
                   <div
@@ -1584,9 +1584,9 @@ export default function KnessetWatchPage() {
               const cardBg = hasGradient
                 ? 'border border-line'
                 : item.IsCoalition === true
-                  ? 'bg-pass-wash border-green-300/50'
+                  ? 'bg-navy-soft/40 border-navy/20'
                   : item.IsCoalition === false
-                    ? 'bg-accent-wash border-accent/50'
+                    ? 'bg-accent-wash border-accent-lit/60'
                     : 'bg-surface border-line';
               const displaySegments = useTimeframeSegments
                 ? filterSegmentsToTimeframe(item.segments, resolvedStart, segmentRangeEnd)
@@ -1632,7 +1632,7 @@ export default function KnessetWatchPage() {
                       </span>
                     )}
                     {item.ministerRole && (
-                      <span className="shrink-0 text-meta font-medium px-1.5 py-0.5 rounded-full bg-amber-400 text-white" title={item.ministerRole}>
+                      <span className="shrink-0 text-meta font-medium px-1.5 py-0.5 rounded-full bg-accent-wash text-accent-ink" title={item.ministerRole}>
                         {item.ministerRole.startsWith('סגן') || item.ministerRole.startsWith('סגנית') ? 'סגן שר' : 'שר'}
                       </span>
                     )}
@@ -1752,7 +1752,7 @@ export default function KnessetWatchPage() {
                         </span>
                       )}
                       {item.ministerRole && (
-                        <span className="text-meta font-medium px-1 py-0.5 rounded bg-amber-400 text-white" title={item.ministerRole}>
+                        <span className="text-meta font-medium px-1 py-0.5 rounded bg-accent-wash text-accent-ink" title={item.ministerRole}>
                           {item.ministerRole.startsWith('סגן') || item.ministerRole.startsWith('סגנית') ? 'סגן שר' : 'שר'}
                         </span>
                       )}

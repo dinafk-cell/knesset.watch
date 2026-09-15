@@ -225,14 +225,14 @@ export default function VoteDetailClient({ voteId }: { voteId: string }) {
                   label="קואליציה"
                   data={coalitionBreakdown.coalition}
                   colorFor="bg-accent"
-                  colorAgainst="bg-rose-400"
+                  colorAgainst="bg-fail"
                   labelClass="text-accent"
                 />
                 <CoalitionBar
                   label="אופוזיציה"
                   data={coalitionBreakdown.opposition}
                   colorFor="bg-accent"
-                  colorAgainst="bg-rose-400"
+                  colorAgainst="bg-fail"
                   labelClass="text-ink-2"
                 />
               </div>
