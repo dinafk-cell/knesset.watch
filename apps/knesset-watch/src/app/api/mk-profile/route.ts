@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateApiAuth } from '@/lib/ui/auth-utils';
 import Database from 'better-sqlite3';
-import path from 'path';
 import {
   getMkPerson,
   getMkBills,

@@ -200,11 +200,8 @@ export default function KeywordMatchClient() {
   return (
     <div className="min-h-screen bg-white" dir="rtl">
       <div className="max-w-3xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <div className="mb-5">
           <h1 className="text-2xl font-medium">מי עובד בשבילך</h1>
-          <Link href="/agenda-match" className="text-xs font-medium underline text-mute hover:text-black">
-            לגרסה הישנה ←
-          </Link>
         </div>
 
         {/*
@@ -228,7 +225,15 @@ export default function KeywordMatchClient() {
                           : 'bg-gray-100 text-mute'
                     }`}
                   >
-                    {done ? '✓' : i + 1}
+                    {/*
+                      הספרה נקראה כמונה תוצאות ולא כמספר שלב, כי השלבים
+                      שהושלמו מציגים ✓ ולכן רק הנוכחי נשא מספר. עכשיו כל
+                      השלבים ממוספרים, וההשלמה מסומנת בצבע ובתווית.
+                    */}
+                    {i + 1}
+                    <span className="sr-only">
+                      {done ? ' — הושלם' : active ? ' — השלב הנוכחי' : ' — טרם הגיע'}
+                    </span>
                   </span>
                   <span
                     className={`text-meta font-medium hidden sm:inline ${
