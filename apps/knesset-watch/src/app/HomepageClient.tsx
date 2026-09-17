@@ -76,6 +76,19 @@ interface RecentBill {
   macroAgenda: string | null;
 }
 
+/**
+ * שלוש שאלות מתוך "הידעת?" לתצוגה בכרטיס.
+ *
+ * נבחרו כאלה שהתשובה עליהן אינה נחשת מראש — הן מה שגורם ללחוץ.
+ * הרשימה המלאה חיה ב-/did-you-know; אם מוסיפים שם שאלה, כאן לא
+ * חייבים לגעת.
+ */
+const DID_YOU_KNOW_TEASERS = [
+  'למה כתוב 123 חברי כנסת, אם בכנסת 120 מושבים?',
+  'מדוע הדירוג אינו מבוסס על חוקים שעברו?',
+  'ח"כ שלא הופיע בתוצאות — לא עושה את עבודתו?',
+];
+
 const SECTIONS = [
   { label: 'ח"כים', sublabel: 'חברי הכנסת ה-25', href: '/mks' },
   { label: 'ועדות', sublabel: 'דיונים ופרוטוקולים', href: '/committees' },
@@ -154,53 +167,10 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
           </p>
 
           <h1 className="text-page sm:text-5xl text-white mb-3">אפרכסת לכנסת</h1>
-          <p className="text-body text-navy-soft mb-8 max-w-xl">
+          <p className="text-body text-navy-soft max-w-xl">
             הצבעות, פרוטוקולים, חוקים, ח&quot;כים וועדות — כל הנתונים של הכנסת ה-25 במקום אחד.
           </p>
 
-          {aiEnabled && (
-          <>
-            <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl">
-              <div className="flex-1 flex items-center border border-white/20 rounded-control px-4 py-3 bg-white/10 focus-within:border-accent-lit transition-colors">
-                <svg className="w-4 h-4 text-navy-mute shrink-0 ml-2" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <circle cx="6.5" cy="6.5" r="4.5"/><path d="m10 10 4 4"/>
-                </svg>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="שאלו שאלה על פעילות הכנסת..."
-                  aria-label="חיפוש בפעילות הכנסת"
-                  className="flex-1 bg-transparent text-ui text-white placeholder:text-navy-mute"
-                  dir="rtl"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={query.trim().length < 2}
-                className="px-5 py-3 rounded-control bg-accent-lit text-navy-deep text-ui font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors shrink-0"
-              >
-                שאל
-              </button>
-            </form>
-
-            {/* מה מותר לשאול. תיבה ריקה לא מלמדת את זה. */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 max-w-xl">
-              <span className="text-meta text-navy-mute">לדוגמה:</span>
-              {EXAMPLE_QUERIES.map(q => (
-                <button
-                  key={q}
-                  type="button"
-                  onClick={() => { setQuery(q); inputRef.current?.focus(); }}
-                  className="text-meta text-navy-soft underline underline-offset-2 hover:text-accent-lit transition-colors"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </>
-          )}
         </div>
       </div>
 
@@ -263,6 +233,41 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
           </div>
         </div>
       )}
+
+      {/*
+        "הידעת?" ראשון, לפני השאלון.
+
+        הוא היה שורה דקה בתחתית ונראה כמו קישור שוליים, בזמן שהוא
+        העמוד שמסביר למה אסור לקרוא דירוג כתשובה חד-משמעית. מי שרואה
+        דירוג לפני שראה אותו יסיק ממנו יותר משהוא אומר, ולכן הוא עולה
+        לכאן — מיד אחרי המספרים ולפני השאלון שמייצר את הדירוג.
+      */}
+      <div className="max-w-3xl mx-auto px-6 mb-8">
+        <Link
+          href="/did-you-know"
+          className="block rounded-card border border-line bg-surface p-6 transition-colors hover:border-accent-lit group"
+        >
+          <h2 className="text-page mb-2 group-hover:text-accent transition-colors">הידעת?</h2>
+          <p className="text-body text-ink-2 mb-4">
+            מה הנתונים באתר אומרים — ומה הם לא. דירוג נראה חד-משמעי, ולכן קל
+            להסיק ממנו יותר משהוא באמת אומר.
+          </p>
+
+          {/* השאלות עצמן. "מה הנתונים אומרים" מופשט; שאלה קונקרטית מסקרנת. */}
+          <ul className="flex flex-col gap-1.5 mb-4">
+            {DID_YOU_KNOW_TEASERS.map(q => (
+              <li key={q} className="flex items-baseline gap-2 text-ui text-ink-2">
+                <span className="text-accent-lit shrink-0" aria-hidden="true">·</span>
+                {q}
+              </li>
+            ))}
+          </ul>
+
+          <span className="text-ui font-medium text-accent">
+            לכל השאלות ←
+          </span>
+        </Link>
+      </div>
 
       {/* שאלון ההתאמה — השלב הראשון יושב כאן, והמשכו ב-/agenda-keywords */}
       <div className="max-w-3xl mx-auto px-6 mb-14">
@@ -337,18 +342,64 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
         </div>
       </div>
 
+      {/*
+        השאלה הפתוחה. הייתה ב-hero ויורדה לכאן: היא מוגבלת במכסה יומית
+        משותפת לכל המבקרים, והשאלון שמעליה חינמי ובלתי מוגבל. אין טעם
+        להציע קודם את מה שעלול להיגמר.
+      */}
+      {aiEnabled && (
       <div className="max-w-3xl mx-auto px-6 mb-14">
-        <Link
-          href="/did-you-know"
-          className="flex items-baseline justify-between gap-4 rounded-card border border-line bg-surface px-5 py-4 transition-colors hover:border-accent-lit"
-        >
-          <span>
-            <span className="text-section block">הידעת?</span>
-            <span className="text-ui text-mute">מה הנתונים באתר אומרים — ומה הם לא</span>
-          </span>
-          <span className="text-ui text-accent shrink-0" aria-hidden="true">←</span>
-        </Link>
+        <div className="rounded-card border border-line bg-surface p-6">
+          <h2 className="text-section mb-1">או שאלו שאלה משלכם</h2>
+          <p className="text-ui text-ink-2 mb-4">
+            חיפוש חופשי בפרוטוקולים, בהצבעות ובהצעות החוק. התשובה מצטטת את
+            המקורות שעליהם היא נשענת.
+          </p>
+
+          <form onSubmit={handleSearch} className="flex items-center gap-2">
+            <div className="flex-1 flex items-center border border-line rounded-control px-4 py-3 bg-paper focus-within:border-accent transition-colors">
+              <svg className="w-4 h-4 text-mute shrink-0 ml-2" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="6.5" cy="6.5" r="4.5"/><path d="m10 10 4 4"/>
+              </svg>
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="שאלו שאלה על פעילות הכנסת..."
+                aria-label="חיפוש בפעילות הכנסת"
+                className="flex-1 bg-transparent text-ui text-ink placeholder:text-mute"
+                dir="rtl"
+              />
+            </div>
+            {/* נייבי ולא זהב: הזהב הבהיר הוא 2.6:1 על רקע בהיר */}
+            <button
+              type="submit"
+              disabled={query.trim().length < 2}
+              className="px-5 py-3 rounded-control bg-navy-deep text-white text-ui font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-navy transition-colors shrink-0"
+            >
+              שאל
+            </button>
+          </form>
+
+          {/* מה מותר לשאול. תיבה ריקה לא מלמדת את זה. */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3">
+            <span className="text-meta text-mute">לדוגמה:</span>
+            {EXAMPLE_QUERIES.map(q => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => { setQuery(q); inputRef.current?.focus(); }}
+                className="text-meta text-accent underline underline-offset-2 hover:text-accent-ink transition-colors"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+)}
+
 
       <div className="max-w-3xl mx-auto px-6 mb-14">
         <h2 className="label-he mb-3">מקטעים</h2>
