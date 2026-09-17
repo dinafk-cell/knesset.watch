@@ -60,3 +60,4 @@ apps/
 # SQLite temp files for every local snapshot, not just knesset.db
 *.db-wal
 *.db-shm
+shortened-questions.json
