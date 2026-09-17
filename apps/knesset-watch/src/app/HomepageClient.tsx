@@ -267,11 +267,15 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
       {/* שאלון ההתאמה — השלב הראשון יושב כאן, והמשכו ב-/agenda-keywords */}
       <div className="max-w-3xl mx-auto px-6 mb-14">
         <div className="rounded-card border border-accent-lit bg-accent-wash p-6">
-          <p className="text-meta font-medium text-accent-ink mb-1">מי עובד בשבילך</p>
-          <h2 className="text-section mb-1">בחרי עד שלושה תחומים שחשובים לך</h2>
-          <p className="text-ui text-ink-2 mb-5">
-            נשאל אותך מה העמדה שלך בכל נושא, ונדרג את חברי הכנסת לפי מידת הפעילות שלהם —
-            הצעות חוק שיזמו והצבעות שתמכו בהן.
+          {/*
+            ההיררכיה הייתה הפוכה: ״מי עובד בשבילך״ — השם שמסביר למה
+            בכלל לעצור כאן — ישב ב-12.5 פיקסל מעל הוראת הפעלה ב-22.
+            מה שמושך את העין צריך להיות מה שמסביר, לא מה שמורה.
+          */}
+          <h2 className="text-page mb-2">מי עובד בשבילך?</h2>
+          <p className="text-body text-ink-2 mb-5">
+            בחרי עד שלושה תחומים שחשובים לך, ונדרג את חברי הכנסת לפי מידת
+            הפעילות שלהם — הצעות חוק שיזמו והצבעות שתמכו בהן.
           </p>
 
           {/*
