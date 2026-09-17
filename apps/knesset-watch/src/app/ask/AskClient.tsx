@@ -153,6 +153,12 @@ export default function AskClient({ initialQ }: { initialQ: string }) {
   const [streamingAnswer, setStreamingAnswer] = useState('');
   const [isStreaming, setIsStreaming]       = useState(false);
   const [error, setError]                   = useState<string | null>(null);
+  /*
+    מכסה שנגמרה אינה תקלה: שום דבר לא נשבר ואין מה לתקן. היא מוצגת
+    כהודעה ולא כאזהרה אדומה, כי אדום אומר ״משהו התקלקל״ ושולח מבקר
+    להסיק שהאתר לא עובד — בזמן שכל שאר האתר פתוח לגמרי.
+  */
+  const [quotaNotice, setQuotaNotice]       = useState<string | null>(null);
   const [loading, setLoading]               = useState(false);
   const [suggestions, setSuggestions]       = useState<string[]>([]);
   // Multi-turn: last completed Q+answer for conversation context
@@ -164,6 +170,7 @@ export default function AskClient({ initialQ }: { initialQ: string }) {
     if (submittedQ.length < 2) return;
     setLoading(true);
     setError(null);
+    setQuotaNotice(null);
     setResult(null);
     setStreamingAnswer('');
     setIsStreaming(false);
@@ -184,8 +191,12 @@ export default function AskClient({ initialQ }: { initialQ: string }) {
         const ct = res.headers.get('content-type') ?? '';
 
         if (ct.includes('application/json')) {
-          const d = await res.json() as AskResult & { error?: string };
-          if (d.error) { setError(d.error); return; }
+          const d = await res.json() as AskResult & { error?: string; kind?: string };
+          if (d.error) {
+            if (d.kind === 'quota') setQuotaNotice(d.error);
+            else setError(d.error);
+            return;
+          }
           setResult(d);
           return;
         }
@@ -326,6 +337,21 @@ export default function AskClient({ initialQ }: { initialQ: string }) {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
             מחפש בנתוני הכנסת…
+          </div>
+        )}
+
+        {quotaNotice && (
+          <div className="rounded-card border border-accent-lit bg-accent-wash px-5 py-4">
+            <p className="text-ui font-medium text-ink mb-1">אין שאלות זמינות כרגע</p>
+            <p className="text-ui text-ink-2">{quotaNotice}</p>
+            <div className="flex flex-wrap gap-3 mt-3">
+              <Link href="/agenda-keywords" className="text-ui font-medium text-accent underline">
+                מי עובד בשבילך ←
+              </Link>
+              <Link href="/protocols" className="text-ui font-medium text-accent underline">
+                חיפוש בפרוטוקולים ←
+              </Link>
+            </div>
           </div>
         )}
 

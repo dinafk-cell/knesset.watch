@@ -135,16 +135,52 @@ export async function checkAskBudget(request: NextRequest): Promise<BudgetVerdic
   }
 }
 
-/** מה המשתמשת רואה. כל סיבה ומה שאפשר לעשות איתה. */
-export function budgetMessage(reason: Exclude<BudgetVerdict, { allowed: true }>['reason']): string {
+/**
+ * מה המשתמשת רואה.
+ *
+ * תקרה שנגמרה אינה תקלה — שום דבר לא נשבר ואין מה לתקן. לכן ההודעה
+ * אומרת שלושה דברים ובסדר הזה: מה קרה, מתי זה חוזר, ומה עובד בינתיים.
+ * החלק השלישי הוא החשוב: מי שהגיע לשאול שאלה אחת לא צריך להסיק
+ * שהאתר מקולקל וללכת.
+ *
+ * kind מפריד בין השניים כדי שהממשק יציג הודעה ולא אזהרה אדומה.
+ */
+export interface BudgetNotice {
+  kind: 'quota' | 'error';
+  message: string;
+}
+
+export function budgetNotice(
+  reason: Exclude<BudgetVerdict, { allowed: true }>['reason'],
+): BudgetNotice {
   switch (reason) {
     case 'global-monthly':
-      return 'מכסת השאלות החודשית של האתר נוצלה. היא מתאפסת בתחילת החודש הבא — שאר האתר עובד כרגיל.';
+      return {
+        kind: 'quota',
+        message:
+          'נגמרו השאלות לחודש הזה. המכסה משותפת לכל המבקרים באתר, ' +
+          'והיא מתחדשת ב-1 בחודש. בינתיים כל השאר פתוח — השאלון, ' +
+          'החיפוש והפרוטוקולים.',
+      };
     case 'global-daily':
-      return 'מכסת השאלות היומית של האתר נוצלה. היא מתאפסת מחר — שאר האתר עובד כרגיל.';
+      return {
+        kind: 'quota',
+        message:
+          'נגמרו השאלות להיום. המכסה משותפת לכל המבקרים באתר, והיא ' +
+          'מתחדשת מחר. בינתיים כל השאר פתוח — השאלון, החיפוש ' +
+          'והפרוטוקולים.',
+      };
     case 'ip-daily':
-      return `הגעת למכסה של ${BUDGET.perIpDaily} שאלות ליום. היא מתאפסת מחר.`;
+      return {
+        kind: 'quota',
+        message:
+          `הגעת ל-${BUDGET.perIpDaily} שאלות היום, שזו המכסה לכל מבקר. ` +
+          'היא מתחדשת מחר. בינתיים אפשר להמשיך בשאלון ובחיפוש.',
+      };
     case 'unavailable':
-      return 'שירות השאלות אינו זמין כרגע. שאר האתר עובד כרגיל.';
+      return {
+        kind: 'error',
+        message: 'שירות השאלות אינו זמין כרגע. כל שאר האתר עובד כרגיל.',
+      };
   }
 }

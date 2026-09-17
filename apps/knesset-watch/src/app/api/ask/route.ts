@@ -3,7 +3,7 @@ import { Redis } from "@upstash/redis";
 import { validateApiAuth } from "@/lib/ui/auth-utils";
 import { aiFeaturesEnabled } from "@/lib/feature-flags";
 import { geminiFetch, geminiUrl, DailyQuotaError } from "@/lib/gemini-fetch";
-import { checkAskBudget, budgetMessage, BUDGET } from "@/lib/ask-budget";
+import { checkAskBudget, budgetNotice, BUDGET } from "@/lib/ask-budget";
 import {
   embedQueryPublic,
   searchProtocols,
@@ -573,8 +573,10 @@ export async function GET(req: NextRequest) {
   const budget = await checkAskBudget(req);
 
   if (!budget.allowed) {
+    const notice = budgetNotice(budget.reason);
     return NextResponse.json(
-      { error: budgetMessage(budget.reason) },
+      // kind מאפשר לממשק להציג הודעה ולא אזהרה אדומה
+      { error: notice.message, kind: notice.kind },
       {
         status: budget.reason === "unavailable" ? 503 : 429,
         headers: { "Retry-After": "3600" },
