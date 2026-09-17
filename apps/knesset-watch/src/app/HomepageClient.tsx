@@ -231,8 +231,14 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
                 trend: stats.trends?.billsPassed, series: 'חוקים שעברו', gold: true },
               { href: '/committees', n: stats.committees.toLocaleString(), label: 'ועדות פעילות',
                 sub: `${stats.sessions.toLocaleString()} ישיבות`, trend: stats.trends?.sessions, series: 'ישיבות ועדה' },
+              /*
+                ״מכהנים כעת״ טען יותר ממה שהנתונים יודעים. המספר מגיע
+                מדגל אחד, mk_person.is_current, והוא 123 — בעוד שבכנסת
+                120 מושבים. הטבלאות שהיו אמורות להסביר את הפער ריקות:
+                mk_faction_history אפס שורות, ולכל אדם אותו טווח תאריכים.
+              */
               { href: '/mks', n: stats.mks.toLocaleString(), label: 'חברי כנסת',
-                sub: 'מכהנים כעת' },
+                sub: 'בכנסת ה-25' },
             ] as StatCard[]).map(c => (
               <Link
                 key={c.href}
