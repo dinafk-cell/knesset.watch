@@ -18,6 +18,30 @@
  * לא יחזרו יחד. Retry-After מהשרת גובר על החישוב שלנו.
  */
 
+/**
+ * הדגם שהאתר מדבר איתו.
+ *
+ * היה gemini-3.5-flash בארבעה מקומות מקודדים קשיח. Google סימנה אותו
+ * כ-legacy, והוא גם עולה כפול מהדור הנוכחי:
+ *
+ *   3.5-flash   $1.50 לקלט, $9.00 לפלט, למיליון טוקנים
+ *   3.8-flash   $0.75 לקלט, $3.75 לפלט (עד 31.12.2026)
+ *
+ * המכסה החינמית נמדדת PerProjectPerModel — לכל דגם מכסה משלו — ולכן
+ * מעבר דגם גם מאפס את המונה היומי.
+ *
+ * לשינוי: GEMINI_MODEL בקובץ הסביבה, בלי לגעת בקוד.
+ */
+export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
+
+/** בונה כתובת לדגם הפעיל. המפתח נשאר אצל הקורא. */
+export function geminiUrl(method: string, key: string, params = ""): string {
+  return (
+    `https://generativelanguage.googleapis.com/v1beta/models/` +
+    `${GEMINI_MODEL}:${method}?key=${key}${params}`
+  );
+}
+
 const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
 
 /**

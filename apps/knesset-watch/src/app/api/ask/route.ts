@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 import { validateApiAuth } from "@/lib/ui/auth-utils";
 import { aiFeaturesEnabled } from "@/lib/feature-flags";
-import { geminiFetch, DailyQuotaError } from "@/lib/gemini-fetch";
+import { geminiFetch, geminiUrl, DailyQuotaError } from "@/lib/gemini-fetch";
 import {
   embedQueryPublic,
   searchProtocols,
@@ -213,7 +213,7 @@ async function* streamGemini(
     התקרה נדיבה יותר מהשאר — כאן נכתבת התשובה המלאה.
   */
   const res = await geminiFetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?key=${key}&alt=sse`,
+    geminiUrl("streamGenerateContent", key, "&alt=sse"),
     {
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: "user", parts: [{ text: userMessage }] }],
@@ -238,6 +238,14 @@ async function* streamGemini(
   const decoder = new TextDecoder();
   let buffer = "";
 
+  /*
+    סיום שאינו STOP פירושו שהמודל נעצר באמצע — תקרת טוקנים, חסימת
+    בטיחות או חשד לשחזור מקור מוגן. בלי לעקוב אחריו, זרם שנקטע
+    נראה בדיוק כמו זרם שהסתיים כרגיל.
+  */
+  let finishReason: string | null = null;
+  let emitted = 0;
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -251,15 +259,32 @@ async function* streamGemini(
       try {
         const parsed = JSON.parse(data) as {
           candidates?: Array<{
+            finishReason?: string;
             content?: { parts?: Array<{ text?: string }> };
           }>;
         };
-        const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) yield text;
+        const candidate = parsed.candidates?.[0];
+        if (candidate?.finishReason) finishReason = candidate.finishReason;
+        /*
+          כל ה-parts, לא רק הראשון: דגמי 3.x מחזירים לעיתים חלק
+          ריק עם thoughtSignature לצד חלק שיש בו טקסט.
+        */
+        for (const part of candidate?.content?.parts ?? []) {
+          if (part.text) { emitted += part.text.length; yield part.text; }
+        }
       } catch {
         /* skip */
       }
     }
+  }
+
+  if (finishReason && finishReason !== "STOP") {
+    console.error(`ask: המודל נעצר — ${finishReason} אחרי ${emitted} תווים`);
+    throw new Error(`TRUNCATED:${finishReason}`);
+  }
+  if (emitted === 0) {
+    console.error("ask: המודל החזיר זרם ריק");
+    throw new Error("EMPTY");
   }
 }
 
@@ -274,7 +299,7 @@ async function rewriteQueryForSearch(
   if (!key) return query;
   try {
     const res = await geminiFetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`,
+      geminiUrl("generateContent", key),
       {
         contents: [
           {
@@ -323,7 +348,7 @@ async function generateSuggestions(query: string): Promise<string[]> {
   if (!key) return [];
   try {
     const res = await geminiFetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`,
+      geminiUrl("generateContent", key),
       {
         contents: [
           {
@@ -370,7 +395,7 @@ async function fetchNewsContext(
   const searchQuery = mkName ? `${mkName} ${topic}` : topic;
   try {
     const res = await geminiFetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`,
+      geminiUrl("generateContent", key),
       {
         contents: [
           {
@@ -576,7 +601,12 @@ export async function GET(req: NextRequest) {
   const hasPrevContext = prevQ.length > 0 && prevA.length > 0;
 
   // 1. Check cache (only for single-turn — multi-turn context is ephemeral)
-  const cacheKey = `ask:v10:${q}`;
+  /*
+    v11 משתי סיבות: להשליך את התשובות הקטועות שנשמרו לפני התיקון,
+    ולא לערבב תשובות של הדגם הקודם עם החדש. המספר עולה בכל שינוי
+    שמייתר את מה שכבר שמור.
+  */
+  const cacheKey = `ask:v11:${q}`;
   if (!hasPrevContext) {
     const cached = await getCached(cacheKey);
     if (cached) return NextResponse.json(cached);
@@ -948,7 +978,17 @@ export async function GET(req: NextRequest) {
           if (suggestions.length > 0)
             send({ type: "suggestions", questions: suggestions });
 
-          if (!hasPrevContext) {
+          /*
+            רק תשובה שנראית שלמה נכנסת לקאש. תשובה קטועה שנשמרת
+            הופכת לקבועה: כל מי ששואל את אותה שאלה מקבל אותה בחזרה
+            בלי קריאה חדשה, ובלי שום סימן שמשהו נכשל. זה מה שקרה
+            לשאלה על דיור, שהחזירה "על פי המקורות ש" ונתקעה שם.
+          */
+          const looksComplete = answer.trim().length >= 80;
+          if (!looksComplete) {
+            console.warn(`ask: תשובה קצרה מדי לקאש (${answer.trim().length} תווים)`);
+          }
+          if (!hasPrevContext && looksComplete) {
             await setCached(cacheKey, {
               answer,
               sources,
@@ -977,6 +1017,12 @@ export async function GET(req: NextRequest) {
             console.error(`ask: מכסה יומית (${e.quotaValue ?? "?"} בקשות)`);
           } else if (msg === "RATE_LIMIT" || msg === "OVERLOADED") {
             userMsg = "שירות ה-AI עמוס כרגע. נסי שוב בעוד רגע — השאלה נשמרה בתיבה.";
+          } else if (msg.startsWith("TRUNCATED:") || msg === "EMPTY") {
+            // המודל נעצר באמצע. זו לא תקלת רשת ולא עומס — ניסוח אחר עשוי לעבוד.
+            userMsg =
+              "התשובה נקטעה באמצע. נסי לשאול שוב, או לצמצם את השאלה " +
+              "לנושא אחד.";
+            console.error("ask:", msg);
           } else {
             userMsg = "לא הצלחנו לייצר תשובה כרגע. אפשר לנסות לנסח את השאלה אחרת.";
             console.error("ask failed:", msg);
