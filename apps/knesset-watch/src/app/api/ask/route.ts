@@ -3,6 +3,7 @@ import { Redis } from "@upstash/redis";
 import { validateApiAuth } from "@/lib/ui/auth-utils";
 import { aiFeaturesEnabled } from "@/lib/feature-flags";
 import { geminiFetch, geminiUrl, DailyQuotaError } from "@/lib/gemini-fetch";
+import { checkAskBudget, budgetMessage, BUDGET } from "@/lib/ask-budget";
 import {
   embedQueryPublic,
   searchProtocols,
@@ -34,7 +35,6 @@ import {
 } from "@/lib/knesset-db";
 import { MK_NICKNAMES } from "@/lib/nicknames";
 import { rateLimit } from "@/lib/ui/rate-limit";
-import { getTursoClient } from "@/lib/turso-db";
 
 export const dynamic = "force-dynamic";
 
@@ -123,58 +123,6 @@ async function setCached(key: string, value: AskResponse): Promise<void> {
   }
 }
 
-const DAILY_ASK_LIMIT = 100;
-
-async function checkDailyQuota(
-  request: NextRequest,
-): Promise<{ isLimited: boolean; remaining: number }> {
-  const client = getTursoClient();
-
-  if (!client) {
-    return {
-      isLimited: false,
-      remaining: DAILY_ASK_LIMIT,
-    };
-  }
-
-  const ip =
-    request.headers.get("x-real-ip") ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "127.0.0.1";
-
-  const today = new Date().toISOString().slice(0, 10);
-
-  try {
-    const result = await client.execute({
-      sql: `
-        INSERT INTO api_daily_usage (
-          usage_date,
-          client_ip,
-          request_count
-        )
-        VALUES (?, ?, 1)
-        ON CONFLICT(usage_date, client_ip)
-        DO UPDATE SET request_count = request_count + 1
-        RETURNING request_count
-      `,
-      args: [today, ip],
-    });
-
-    const count = Number(result.rows[0]?.request_count ?? 0);
-
-    return {
-      isLimited: count > DAILY_ASK_LIMIT,
-      remaining: Math.max(0, DAILY_ASK_LIMIT - count),
-    };
-  } catch (error) {
-    console.error("Daily quota error:", error);
-
-    return {
-      isLimited: false,
-      remaining: DAILY_ASK_LIMIT,
-    };
-  }
-}
 // ── Gemini helpers ────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT_GENERAL = `אתה אנליסט נתוני הכנסת הישראלית. ענה בעברית בלבד, בצורה ממוקדת ואנליטית.
@@ -578,8 +526,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  /*
+    עשר שאלות בדקה אינן התנהגות אנושית — הקלדה, קריאת תשובה של
+    עשר שניות, וחשיבה על השאלה הבאה. חמש מספיקות בשפע ומקשות על
+    סקריפט שמנסה לרוקן את המכסה.
+  */
   const { isLimited } = rateLimit(req, {
-    limit: 10,
+    limit: BUDGET.perIpPerMinute,
     windowMs: 60_000,
   });
 
@@ -612,14 +565,20 @@ export async function GET(req: NextRequest) {
     if (cached) return NextResponse.json(cached);
   }
 
-  const quota = await checkDailyQuota(req);
+  /*
+    שלוש תקרות: חודשית גלובלית, יומית גלובלית, ויומית לכל כתובת.
+    הגלובליות הן ההגנה האמיתית — כתובת IP ניתנת להחלפה, ולכן מגבלה
+    שנשענת רק עליה אינה מגנה על ההוצאה.
+  */
+  const budget = await checkAskBudget(req);
 
-  if (quota.isLimited) {
+  if (!budget.allowed) {
     return NextResponse.json(
+      { error: budgetMessage(budget.reason) },
       {
-        error: "Daily AI usage limit reached. Please try again tomorrow.",
+        status: budget.reason === "unavailable" ? 503 : 429,
+        headers: { "Retry-After": "3600" },
       },
-      { status: 429 },
     );
   }
 
