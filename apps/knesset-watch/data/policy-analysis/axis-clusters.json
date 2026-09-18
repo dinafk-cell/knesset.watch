@@ -1747,7 +1747,7 @@
     "clusterId": "cl_lgbt_rights",
     "topic": "עבודה, זכויות ושוויון",
     "label": "זכויות קהילת להט\"ב",
-    "billCount": 37,
+    "billCount": 52,
     "members": [
       {
         "issueId": "ax_conversion_therapy",
@@ -1769,6 +1769,14 @@
         "subtopic": "זכויות פרט וקהילת להט\"ב",
         "question": "האם להכיר בפגיעה על רקע נטייה מינית כפשע שנאה?",
         "billCount": 8
+      },
+      {
+        "issueId": "ax_74732862df",
+        "keyword": "פתיחת האימוץ וההורות לכל מבנה משפחה",
+        "subtopic": "זכויות פרט וקהילת להט\"ב",
+        "question": "האם לפתוח את מסגרות האימוץ וההורות לכולם?",
+        "billCount": 15,
+        "shared": true
       }
     ]
   }

@@ -113,6 +113,31 @@ const AXES: AxisDef[] = [
   },
 ];
 
+/**
+ * ציר קיים שמקבל בית שני באשכול, בלי ציר חדש ובלי לגעת בשיוכי ההצעות.
+ *
+ * "האם לפתוח את מסגרות האימוץ וההורות לכולם?" יושב באשכול "משפחות
+ * וילדים", ושייך לשם. אבל 13 מ-15 ההצעות שלו עוסקות בדיוק במחסומים
+ * שחלים על זוגות חד-מיניים: "רק איש ואשתו כשירים לאמץ" שמוחלף ב"שני
+ * בני אדם", רישום בן או בת זוג כהורה, הורה נוסף לילד מתרומת זרע,
+ * והחלפת "אב" ו"אם" בטפסים.
+ *
+ * אף אחת מהן אינה מזכירה להט"ב במילה מפורשת. החקיקה מנוסחת בלשון
+ * ניטרלית בכוונה, ולכן חיפוש מילות מפתח לא מוצא אותה — נקודה עיוורת
+ * שכדאי לזכור בכל סריקה עתידית של התחום.
+ *
+ * הצגה בשני אשכולות בטוחה: העמדות נשמרות כאובייקט לפי issueId
+ * (KeywordMatchClient שורה 173), ולכן הציר נספר פעם אחת בציון גם אם
+ * הוא מוצג פעמיים.
+ */
+const SHARED = [{
+  issueId: 'ax_74732862df',
+  keyword: 'פתיחת האימוץ וההורות לכל מבנה משפחה',
+  subtopic: SUBTOPIC,
+  question: 'האם לפתוח את מסגרות האימוץ וההורות לכולם?',
+  billCount: 15,
+}];
+
 /* שני תווי גרשיים בעברית; הנתונים מערבבים ביניהם */
 const IDENTITY = ['נטייה מינית', 'נטיה מינית', 'זהות מגדרית', 'להט"ב', 'להט״ב'];
 const PROTECTION = ['פליה', 'שנאה', 'שוויון ההזדמנויות'];
@@ -145,12 +170,17 @@ function runUndo(db: Database.Database): void {
     removed += db.prepare('DELETE FROM bill_political_classification WHERE issue_id = ?').run(a.id).changes;
   }
   const ids = new Set(AXES.map(a => a.id));
+  /*
+    מהקטלוג מוסרים רק הצירים החדשים. הציר המשותף נשאר — הוא לא נוצר
+    כאן, ומחיקתו הייתה מוחקת ציר שהאשכול "משפחות וילדים" תלוי בו.
+  */
   writeJson(CATALOG, readJson(CATALOG).filter(a => !ids.has(String(a.issueId))));
 
+  const drop = new Set([...ids, ...SHARED.map(s => s.issueId)]);
   const cl = readJson(CLUSTERS);
   for (const c of cl) {
     if (c.clusterId !== CLUSTER_ID) continue;
-    const members = (c.members as Array<Record<string, unknown>>).filter(m => !ids.has(String(m.issueId)));
+    const members = (c.members as Array<Record<string, unknown>>).filter(m => !drop.has(String(m.issueId)));
     c.members = members;
     c.billCount = members.reduce((s, m) => s + Number(m.billCount ?? 0), 0);
   }
@@ -226,6 +256,19 @@ function main(): void {
       issueId: axis.id, originalKeyword: axis.keyword, subtopic: SUBTOPIC,
       question: axis.question, billCount: bs.length,
     });
+  }
+  /*
+    הציר המשותף נוסף לאשכול בלבד. הוא כבר קיים בקטלוג ובאשכול אחר,
+    וההצעות שלו כבר משויכות — כתיבה נוספת כאן הייתה משכפלת אותן.
+  */
+  for (const s of SHARED) {
+    const inCatalog = cat.some(a => a.issueId === s.issueId);
+    if (!inCatalog) {
+      console.error(`✗ הציר המשותף ${s.issueId} לא קיים בקטלוג. עוצר.`);
+      db.close(); process.exit(1);
+    }
+    members.push({ ...s, shared: true });
+    console.log(`\nציר משותף נוסף לאשכול (בלי שינוי בשיוכים): ${s.question}`);
   }
   cluster.billCount = members.reduce((s, m) => s + Number(m.billCount ?? 0), 0);
   writeJson(CLUSTERS, cl);
