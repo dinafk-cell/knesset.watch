@@ -42,7 +42,14 @@ const SAMPLE = 100;
 const BATCH = 10;
 
 interface Orphan { billId: number; title: string; change: string; domain: string }
-interface Match { billId: number; issueId: string | null; side: string | null; why?: string }
+interface Match {
+  billId: number;
+  issueId: string | null;
+  side: string | null;
+  /** high | medium | low — נשמר כדי שאפשר יהיה לסנן לפיו בשלב ההחלה */
+  confidence?: string;
+  why?: string;
+}
 
 const AXES = CLUSTERS.flatMap(c =>
   c.questions.map(q => ({ id: q.issueId, q: q.question, cluster: c.label })));
@@ -139,7 +146,15 @@ async function askBatch(batch: Orphan[], key: string, label: string): Promise<Ma
       const issueId = r.issueId ? String(r.issueId) : null;
       if (issueId && !valid.has(issueId)) return [];
       const side = r.side === 'pro' || r.side === 'con' ? String(r.side) : null;
-      return [{ billId, issueId: issueId && side ? issueId : null, side: issueId && side ? side : null, why: r.why ? String(r.why) : undefined }];
+      const ok = Boolean(issueId && side);
+      const conf = ['high', 'medium', 'low'].includes(String(r.confidence)) ? String(r.confidence) : undefined;
+      return [{
+        billId,
+        issueId: ok ? issueId : null,
+        side: ok ? side : null,
+        confidence: ok ? conf : undefined,
+        why: r.why ? String(r.why) : undefined,
+      }];
     });
   } catch { return null; }
 }
@@ -210,12 +225,12 @@ async function main(): Promise<void> {
   }
 
   const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
-  const lines = [['bill_id', 'כותרת', 'הציר שנמצא', 'צד', 'נימוק'].map(esc).join(',')];
+  const lines = [['bill_id', 'כותרת', 'הציר שנמצא', 'צד', 'ביטחון', 'נימוק'].map(esc).join(',')];
   for (const o of work) {
     const m = done.get(o.billId);
     if (!m) continue;
     lines.push([o.billId, o.title, m.issueId ? AXES.find(a => a.id === m.issueId)?.q ?? m.issueId : '(ללא ציר)',
-      m.side ?? '', m.why ?? ''].map(esc).join(','));
+      m.side ?? '', m.confidence ?? '', m.why ?? ''].map(esc).join(','));
   }
   fs.writeFileSync(CSV, '﻿' + lines.join('\n') + '\n');
   console.log(`\nנכתב: ${path.basename(CSV)} · לא נכתב דבר למסד.`);
