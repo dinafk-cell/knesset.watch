@@ -117,6 +117,9 @@ async function embedAll(texts: string[], label: string): Promise<Array<number[] 
   return texts.map(t => cache[t] ?? null);
 }
 
+/** עיגול כלפי מטה, כדי שמספר לא ייראה כחורג מהסף שהוא נכשל בו */
+const floor4 = (n: number) => (Math.floor(n * 10000) / 10000).toFixed(4);
+
 const cos = (a: number[], b: number[]) => {
   let d = 0, na = 0, nb = 0;
   for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
@@ -290,21 +293,37 @@ async function main() {
   */
   const classifiedNow = new Set(kept.map(m => m.billId));
   const needManual = [...ambiguous, ...belowScore].filter(m => !classifiedNow.has(m.billId));
+  /*
+    שני מספרים שונים לגמרי, ובגרסה הקודמת שניהם נקראו ״ציון״ והיו
+    מעורבבים בעמודה אחת:
+
+      ציון התאמה  כמה ההצעה דומה לציר.  טווח 0.4-0.9,  סף 0.65
+      מרווח צד    כמה ברור אם היא בעד או נגד. טווח 0-0.3, סף 0.05
+
+    עכשיו לכל אחד עמודה משלו, וסיבת הדחייה היא מילים ולא מספר.
+  */
   const header = [
-    'bill_id', 'סיבת הדחייה', 'כותרת החוק', 'הסוגיה', 'עמדת בעד', 'עמדת נגד',
-    'מועמד 1', 'ציון 1', 'מועמד 2', 'ציון 2', 'מועמד 3', 'ציון 3',
+    'bill_id', 'מה חסר', 'ציון התאמה', 'מרווח צד',
+    'כותרת החוק', 'הסוגיה', 'עמדת בעד', 'עמדת נגד',
+    'מועמד 1', 'התאמה 1', 'מועמד 2', 'התאמה 2', 'מועמד 3', 'התאמה 3',
     'ציר נבחר (למילוי)', 'צד pro/con (למילוי)',
   ];
   const csv = [header.map(esc).join(',')];
   for (const m of needManual) {
     const src = byBillIssue.get(`${m.billId}|${m.issueCandidate}`);
-    const reason = m.score < THRESHOLD ? `ציון ${m.score.toFixed(3)}` : `מרווח צד ${m.sideMargin.toFixed(3)}`;
+    const reason = m.score < THRESHOLD ? 'אין ציר מתאים' : 'הצד אינו ברור';
+    /*
+      עיגול כלפי מטה, לא לזוגי הקרוב. ציון של 0.64999 מעוגל רגיל
+      מוצג כ-0.6500 — ואז שורה שנדחתה נראית כאילו עברה את הסף,
+      ומי שקורא את הקובץ מסיק שהסינון שבור. הוא אינו.
+    */
     csv.push([
-      String(m.billId), reason, m.billTitle, m.issueCandidate,
+      String(m.billId), reason, floor4(m.score), floor4(m.sideMargin),
+      m.billTitle, m.issueCandidate,
       src?.pro ?? '', src?.con ?? '',
-      m.alternatives[0]?.question ?? '', (m.alternatives[0]?.score ?? 0).toFixed(3),
-      m.alternatives[1]?.question ?? '', (m.alternatives[1]?.score ?? 0).toFixed(3),
-      m.alternatives[2]?.question ?? '', (m.alternatives[2]?.score ?? 0).toFixed(3),
+      m.alternatives[0]?.question ?? '', floor4(m.alternatives[0]?.score ?? 0),
+      m.alternatives[1]?.question ?? '', floor4(m.alternatives[1]?.score ?? 0),
+      m.alternatives[2]?.question ?? '', floor4(m.alternatives[2]?.score ?? 0),
       '', '',
     ].map(esc).join(','));
   }
