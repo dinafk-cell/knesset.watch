@@ -86,7 +86,16 @@ async function embedAll(texts: string[], label: string): Promise<Array<number[] 
     */
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
     for (let i = 0; i < need.length; i += 24) {
-      const batch = need.slice(i, i + 24).map(t => t.slice(0, 700));
+      /*
+        הקיצוץ נעשה על העותק שנשלח בלבד, והקאש נשמר תחת המפתח המלא.
+
+        בגרסה הקודמת נשמר תחת המפתח החתוך, ולכן כל טקסט ארוך מ-700
+        תווים לא נמצא בחיפוש החוזר — הוא חזר null, השורה דולגה בשקט,
+        והצעת החוק נעלמה משני קובצי הפלט גם יחד. עשר הצעות אבדו ככה,
+        וזה התגלה רק כי המאזן לא הסתדר.
+      */
+      const keys = need.slice(i, i + 24);
+      const batch = keys.map(t => t.slice(0, 700));
       let ok = false;
       for (let attempt = 0; attempt < 6 && !ok; attempt++) {
         const res = await fetch('https://api.jina.ai/v1/embeddings', {
@@ -102,7 +111,7 @@ async function embedAll(texts: string[], label: string): Promise<Array<number[] 
         }
         if (!res.ok) throw new Error(`Jina ${res.status}: ${(await res.text()).slice(0, 160)}`);
         const data = await res.json() as { data?: Array<{ embedding?: number[] }> };
-        (data.data ?? []).forEach((d, j) => { if (d.embedding) cache[batch[j]] = d.embedding; });
+        (data.data ?? []).forEach((d, j) => { if (d.embedding) cache[keys[j]] = d.embedding; });
         fs.writeFileSync(CACHE, JSON.stringify(cache));
         ok = true;
       }
@@ -209,10 +218,12 @@ async function main() {
     alternatives: Array<{ id: string; question: string; score: number }>;
   }
   const matches: Match[] = [];
+  const skipped: number[] = [];
 
   for (let i = 0; i < rows.length; i++) {
     const v = rowVecs[i], p = rowPro[i];
-    if (!v || !p) continue;
+    // דילוג שקט הוא איך שעשר ההצעות אבדו. עכשיו הוא נספר ומדווח.
+    if (!v || !p) { skipped.push(rows[i].billId); continue; }
 
     // שלושת הקרובים, כדי שהבדיקה הידנית תוכל לבחור ולא רק לאשר
     const ranked = axes
@@ -251,6 +262,12 @@ async function main() {
   }
 
   // ── דוח ────────────────────────────────────────────────────────────
+  if (skipped.length) {
+    console.error(`
+✗ ${skipped.length} שורות דולגו — ההטמעה נכשלה:`);
+    console.error(`   ${skipped.slice(0, 10).join(', ')}`);
+  }
+
   const lines: string[] = [];
   const say = (s = '') => { console.log(s); lines.push(s); };
 
