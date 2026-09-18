@@ -641,6 +641,37 @@ export default function KeywordMatchClient() {
                           </>
                         )}
                       </div>
+
+                      {/*
+                        כיסוי: בכמה מהנושאים שנבחרו נמצא חומר על הח״כ הזה.
+
+                        הציון מחולק במספר הנושאים שנבחרו, ולא במספר שהוא
+                        פעיל בהם. מי שנוגע בשניים מתוך שישה מקבל ארבעה
+                        אפסים בממוצע — וזה לא נראה בשום מקום בכרטיס.
+                        שתי שורות עם אותו ציון יכולות להיות ״בינוני בכולם״
+                        ו״חזק מאוד באחד״, ואלה דברים שונים לגמרי.
+
+                        האפס עצמו מעורפל: הוא יכול להיות ״לא עשה כלום״,
+                        אבל גם ״הצביע לצד השני״ או ״הצעת החוק שלו לא סווגה
+                        לנושא הזה״. לכן הניסוח הוא ״נמצא חומר״ ולא ״פעל״.
+                      */}
+                      {(() => {
+                        const activeIn = row.perAgenda.length;
+                        const selected = clusters.reduce(
+                          (n, id) => n + (getCluster(id)?.questions.length ?? 0),
+                          0,
+                        );
+                        if (selected === 0) return null;
+                        const partial = activeIn < selected;
+                        return (
+                          <p
+                            className={`mt-1.5 text-meta ${partial ? 'text-warn' : 'text-mute'}`}
+                            title="נושא ללא חומר נספר כאפס בממוצע"
+                          >
+                            נמצא חומר ב-{activeIn} מתוך {selected} הנושאים שבחרת
+                          </p>
+                        );
+                      })()}
                     </li>
                   ))}
                 </ol>
