@@ -1,0 +1,268 @@
+/**
+ * החזרת הצעות חוק יתומות לטקסונומיה, לפי תוכן העמדות.
+ *
+ * ── הבעיה ────────────────────────────────────────────────────────────
+ *
+ * 2,558 הצעות חוק עם יוזם אינן מסווגות לאף סוגיה בשאלון, ולכן כל אחת
+ * מהן היא אפס בדירוג. זהו שליש מהעבודה החקיקתית של כמעט כל ח"כ.
+ *
+ * הסיבה אינה חוסר בנתונים. ל-100% מהן יש ניתוח מלא עם שתי עמדות
+ * מנוסחות. הכשל הוא בשדה שעליו רץ האשכול:
+ *
+ *   raw_issue    "רישום כוורות במקרקעין שאינם מקרקעי ציבור"
+ *   pro_stance   "לחייב רישום כדי לפקח על מחלות זיהומיות"
+ *   con_stance   "התערבות מיותרת שפוגעת בזכויות קניין ובפרטיות"
+ *
+ * שם הסוגיה מתאר את החוק ולכן הוא כמעט תמיד ייחודי — cluster_size=1
+ * אצל כל היתומות. העמדות מתארות מחלוקת, והמחלוקות חוזרות: רגולציה
+ * מול חופש עיסוק, פיקוח מול פרטיות, ריכוזיות מול ביזור. הכוורות הן
+ * מקרה פרטי של ציר שכבר קיים בשאלון.
+ *
+ * במדידה על 120 הצעות: התאמה לפי עמדות נתנה 87 מעל 0.60 לעומת 33
+ * לפי שם, וההתאמות היו גם נכונות יותר ולא רק גבוהות יותר.
+ *
+ * ── מה הסקריפט עושה ──────────────────────────────────────────────────
+ *
+ *   1. מתאים כל שורת סוגיה יתומה לציר, לפי טקסט העמדות.
+ *   2. קובע צד: העמדה שההצעה מקדמת מושווית לשני צידי הציר.
+ *   3. מדווח כמה נכנסות בכל סף, ומייצר מדגם לבדיקה ידנית.
+ *
+ * הוא אינו כותב למסד. הפלט הוא JSONL לבדיקה, ורק --apply יכתוב —
+ * וגם אז לטבלה נפרדת, לא על bill_political_classification.
+ *
+ *   npx tsx scripts/rescue-orphan-bills.ts                דוח מלא
+ *   npx tsx scripts/rescue-orphan-bills.ts --limit 200    מדגם מהיר
+ *   npx tsx scripts/rescue-orphan-bills.ts --threshold .65
+ */
+
+import Database from 'better-sqlite3';
+import fs from 'fs';
+import path from 'path';
+import { CLUSTERS } from '../src/lib/axis-clusters';
+
+const DIMS = 256;
+const CACHE = path.join(process.cwd(), '.embed-cache.json');
+const OUT = path.join(process.cwd(), 'orphan-rescue.jsonl');
+const REPORT = path.join(process.cwd(), 'orphan-rescue-report.txt');
+
+const arg = (name: string) => {
+  const i = process.argv.indexOf(name);
+  return i > 0 ? process.argv[i + 1] : null;
+};
+const LIMIT = Number(arg('--limit')) || Infinity;
+const THRESHOLD = Number(arg('--threshold')) || 0.65;
+
+const jinaKey = (() => {
+  for (const line of fs.readFileSync('.env.local', 'utf8').split('\n')) {
+    if (line.startsWith('JINA_API_KEY=')) return line.slice('JINA_API_KEY='.length).trim();
+  }
+  throw new Error('אין JINA_API_KEY ב-.env.local');
+})();
+
+/* ── הטמעה, עם קאש על הדיסק ──────────────────────────────────────────
+   הרצה חוזרת אינה משלמת שוב על אותו טקסט. הקאש הוא קובץ מקומי
+   ו-gitignored; מחיקתו רק מייקרת את ההרצה הבאה. */
+const cache: Record<string, number[]> = fs.existsSync(CACHE)
+  ? JSON.parse(fs.readFileSync(CACHE, 'utf8'))
+  : {};
+
+async function embedAll(texts: string[], label: string): Promise<Array<number[] | null>> {
+  const need = [...new Set(texts.filter(t => t && !cache[t]))];
+  if (need.length) {
+    /*
+      Jina מגביל ל-100,000 טוקנים לדקה. אצווה של 48 עמדות בעברית חורגת
+      מזה בהרצה רציפה, ולכן: אצווה קטנה יותר, השהיה בין אצוות, וניסיון
+      חוזר על 429. הקאש נכתב אחרי כל אצווה, כדי שהרצה שנקטעת לא תשלם
+      שוב על מה שכבר הוטמע.
+    */
+    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+    for (let i = 0; i < need.length; i += 24) {
+      const batch = need.slice(i, i + 24).map(t => t.slice(0, 700));
+      let ok = false;
+      for (let attempt = 0; attempt < 6 && !ok; attempt++) {
+        const res = await fetch('https://api.jina.ai/v1/embeddings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jinaKey}` },
+          body: JSON.stringify({ model: 'jina-embeddings-v3', input: batch, dimensions: DIMS }),
+        });
+        if (res.status === 429) {
+          const wait = 15_000 * (attempt + 1);
+          process.stdout.write(`\r  ${label}: מגבלת קצב, ממתין ${wait / 1000}ש...        `);
+          await sleep(wait);
+          continue;
+        }
+        if (!res.ok) throw new Error(`Jina ${res.status}: ${(await res.text()).slice(0, 160)}`);
+        const data = await res.json() as { data?: Array<{ embedding?: number[] }> };
+        (data.data ?? []).forEach((d, j) => { if (d.embedding) cache[batch[j]] = d.embedding; });
+        fs.writeFileSync(CACHE, JSON.stringify(cache));
+        ok = true;
+      }
+      if (!ok) throw new Error(`${label}: מגבלת הקצב לא התפנתה`);
+      process.stdout.write(`\r  ${label}: ${Math.min(i + 24, need.length)}/${need.length} חדשים        `);
+      await sleep(2_000);
+    }
+    process.stdout.write('\n');
+  } else {
+    console.log(`  ${label}: הכול בקאש`);
+  }
+  return texts.map(t => cache[t] ?? null);
+}
+
+const cos = (a: number[], b: number[]) => {
+  let d = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return d / (Math.sqrt(na) * Math.sqrt(nb));
+};
+
+interface Row {
+  billId: number; billTitle: string; issueCandidate: string;
+  policyChange: string; pro: string; con: string;
+}
+
+async function main() {
+  // ── אילו הצעות יתומות ──────────────────────────────────────────────
+  const mapping = fs.readFileSync('data/policy-analysis/canonical/bill-issue-mapping.jsonl', 'utf8')
+    .trim().split('\n').map(l => { try { return JSON.parse(l); } catch { return null; } })
+    .filter(Boolean) as Array<Record<string, unknown>>;
+  const orient = new Set(fs.readFileSync('data/policy-analysis/canonical-orientation.jsonl', 'utf8')
+    .trim().split('\n').map(l => { try { return JSON.parse(l).canonical_issue_id; } catch { return null; } }));
+
+  const db = new Database('knesset.db', { readonly: true });
+  const classified = new Set(
+    (db.prepare('SELECT DISTINCT bill_id FROM bill_political_classification').all() as Array<{ bill_id: number }>)
+      .map(r => r.bill_id));
+
+  const orphanIds = [...new Set(
+    mapping.filter(m => m.review_required || !orient.has(m.canonical_issue_id)).map(m => Number(m.bill_id)),
+  )].filter(id => !classified.has(id));
+
+  const ids = orphanIds.slice(0, LIMIT === Infinity ? orphanIds.length : LIMIT);
+  console.log(`הצעות יתומות שאינן מסווגות כלל: ${orphanIds.length.toLocaleString()}`);
+  console.log(`מעובדות בהרצה זו              : ${ids.length.toLocaleString()}\n`);
+
+  const rows: Row[] = [];
+  for (let i = 0; i < ids.length; i += 400) {
+    const slice = ids.slice(i, i + 400);
+    const ph = slice.map(() => '?').join(',');
+    const got = db.prepare(`
+      SELECT i.bill_id AS billId, b.title AS billTitle, i.issue_candidate AS issueCandidate,
+             i.policy_change AS policyChange, i.pro_stance AS pro, i.con_stance AS con
+      FROM bill_policy_issue i JOIN bill b ON b.id = i.bill_id
+      WHERE i.bill_id IN (${ph})
+        AND i.pro_stance IS NOT NULL AND i.con_stance IS NOT NULL
+        AND LENGTH(i.pro_stance) > 10 AND LENGTH(i.con_stance) > 10`).all(...slice) as Row[];
+    rows.push(...got);
+  }
+  db.close();
+  console.log(`שורות סוגיה לעיבוד: ${rows.length.toLocaleString()}\n`);
+
+  // ── הצירים ─────────────────────────────────────────────────────────
+  const axes = CLUSTERS.flatMap(c => c.questions.map(q => ({
+    id: q.issueId,
+    question: q.question,
+    proId: q.stances[0]?.id ?? '',
+    conId: q.stances[1]?.id ?? '',
+    proLabel: q.stances[0]?.label ?? '',
+    conLabel: q.stances[1]?.label ?? '',
+  }))).filter(a => a.proId && a.conId);
+
+  console.log(`צירים: ${axes.length}\n`);
+  console.log('מטמיע...');
+  const axisVecs = await embedAll(axes.map(a => `${a.question} ${a.proLabel} ${a.conLabel}`), 'צירים');
+  const axisPro = await embedAll(axes.map(a => a.proLabel), 'צד בעד');
+  const axisCon = await embedAll(axes.map(a => a.conLabel), 'צד נגד');
+  const rowVecs = await embedAll(rows.map(r => `${r.policyChange} ${r.pro} ${r.con}`), 'יתומות');
+  const rowPro = await embedAll(rows.map(r => r.pro), 'עמדת ההצעה');
+
+  // ── התאמה וקביעת צד ────────────────────────────────────────────────
+  interface Match {
+    billId: number; billTitle: string; issueCandidate: string;
+    axisId: string; axisQuestion: string; score: number;
+    side: 'pro' | 'con'; stanceId: string; sideMargin: number;
+  }
+  const matches: Match[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const v = rowVecs[i], p = rowPro[i];
+    if (!v || !p) continue;
+
+    let bi = -1, bs = -1;
+    for (let j = 0; j < axes.length; j++) {
+      const av = axisVecs[j];
+      if (!av) continue;
+      const s = cos(v, av);
+      if (s > bs) { bs = s; bi = j; }
+    }
+    if (bi < 0) continue;
+
+    /*
+      הצד נקבע מהעמדה שההצעה מקדמת. pro_stance הוא הנימוק בעד השינוי
+      שההצעה עושה, ולכן הוא מייצג את עמדת ההצעה עצמה. משווים אותו
+      לשני צידי הציר ולוקחים את הקרוב.
+
+      sideMargin הוא ההפרש בין השניים. מרווח קטן פירושו שהעמדה יושבת
+      באמצע ואי אפשר לקבוע צד — ושם עדיף לא לסווג כלל.
+    */
+    const ap = axisPro[bi], ac = axisCon[bi];
+    if (!ap || !ac) continue;
+    const simPro = cos(p, ap), simCon = cos(p, ac);
+    const side: 'pro' | 'con' = simPro >= simCon ? 'pro' : 'con';
+
+    matches.push({
+      billId: rows[i].billId,
+      billTitle: rows[i].billTitle,
+      issueCandidate: rows[i].issueCandidate,
+      axisId: axes[bi].id,
+      axisQuestion: axes[bi].question,
+      score: bs,
+      side,
+      stanceId: side === 'pro' ? axes[bi].proId : axes[bi].conId,
+      sideMargin: Math.abs(simPro - simCon),
+    });
+  }
+
+  // ── דוח ────────────────────────────────────────────────────────────
+  const lines: string[] = [];
+  const say = (s = '') => { console.log(s); lines.push(s); };
+
+  say('\n═══ כמה נכנסות בכל סף ═══');
+  say(`  ${'סף'.padStart(5)}  ${'שורות'.padStart(7)}  ${'הצעות חוק'.padStart(10)}  ${'% מהיתומות'.padStart(11)}`);
+  for (const t of [0.55, 0.6, 0.65, 0.7, 0.75, 0.8]) {
+    const hit = matches.filter(m => m.score >= t);
+    const bills = new Set(hit.map(m => m.billId)).size;
+    say(`  ${t.toFixed(2).padStart(5)}  ${String(hit.length).padStart(7)}  ${String(bills).padStart(10)}  ${String(Math.round(bills / ids.length * 100) + '%').padStart(11)}`);
+  }
+
+  const kept = matches.filter(m => m.score >= THRESHOLD);
+  say(`\n═══ בסף ${THRESHOLD} ═══`);
+  say(`  שורות      : ${kept.length.toLocaleString()}`);
+  say(`  הצעות חוק  : ${new Set(kept.map(m => m.billId)).size.toLocaleString()}`);
+  say(`  צירים שונים: ${new Set(kept.map(m => m.axisId)).size}`);
+  say(`  בעד / נגד  : ${kept.filter(m => m.side === 'pro').length} / ${kept.filter(m => m.side === 'con').length}`);
+
+  const margins = kept.map(m => m.sideMargin).sort((a, b) => a - b);
+  if (margins.length) {
+    const pm = (q: number) => margins[Math.floor(margins.length * q)].toFixed(3);
+    say(`  מרווח הצד  : חציון ${pm(.5)} | p25 ${pm(.25)} | מינימום ${margins[0].toFixed(3)}`);
+    say(`  מרווח < 0.02 (לא ניתן לקבוע צד): ${margins.filter(m => m < 0.02).length}`);
+  }
+
+  say('\n═══ מדגם אקראי לבדיקה ידנית ═══');
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (const m of [...kept].sort(() => rnd() - 0.5).slice(0, 12)) {
+    say(`\n  ${m.score.toFixed(3)} · ${m.side === 'pro' ? 'בעד' : 'נגד'} (מרווח ${m.sideMargin.toFixed(3)})`);
+    say(`    חוק  : ${m.billTitle.slice(0, 62)}`);
+    say(`    סוגיה: ${m.issueCandidate.slice(0, 62)}`);
+    say(`    ציר  : ${m.axisQuestion.slice(0, 62)}`);
+  }
+
+  fs.writeFileSync(OUT, kept.map(m => JSON.stringify(m)).join('\n') + '\n');
+  fs.writeFileSync(REPORT, lines.join('\n') + '\n');
+  say(`\n\nנכתבו:`);
+  say(`  ${path.basename(OUT)}     ${kept.length.toLocaleString()} התאמות`);
+  say(`  ${path.basename(REPORT)}  הדוח הזה`);
+  say('\nלא נכתב דבר למסד. הטבלה bill_political_classification לא נגעה.');
+}
+
+main();

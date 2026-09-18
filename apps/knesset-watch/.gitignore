@@ -61,3 +61,7 @@ apps/
 *.db-wal
 *.db-shm
 shortened-questions.json
+
+.embed-cache.json
+orphan-rescue.jsonl
+orphan-rescue-report.txt
