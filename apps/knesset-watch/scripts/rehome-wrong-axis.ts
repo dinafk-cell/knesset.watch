@@ -39,7 +39,14 @@ import { geminiFetch, geminiUrl, DailyQuotaError } from '../src/lib/gemini-fetch
 import { CLUSTERS } from '../src/lib/axis-clusters';
 
 const DB_PATH = path.join(process.cwd(), 'knesset.db');
-const AUDIT = path.join(process.cwd(), 'audit-classifications.jsonl');
+/*
+  ברירת המחדל היא הקובץ המסונן — רק שיוכים ששני פרומפטים שונים פסלו.
+  פסילה של פרומפט אחד בלבד אינה מספיקה: ההשוואה בין הסבבים הראתה 454
+  כאלה, והן בדיוק פסילות השווא שהתיקון בפרומפט הסיר.
+*/
+const inArg = process.argv.indexOf('--input');
+const AUDIT = path.join(process.cwd(),
+  inArg >= 0 ? process.argv[inArg + 1] : 'audit-stable.jsonl');
 const OUT = path.join(process.cwd(), 'rehome-suggestions.jsonl');
 const CSV = path.join(process.cwd(), 'rehome-suggestions.csv');
 
