@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { CLUSTER_TOPICS, clustersOfTopic, getCluster, CLUSTER_STATS } from '@/lib/axis-clusters';
 import { TOPIC_COLOR, TOPIC_FALLBACK } from '@/lib/ui/colors';
 import { countLabel } from '@/lib/ui/plural';
+import { WeightingNotice } from '@/components/WeightingNotice';
 import { MkAvatar, MkBackground } from '@/components/MkIdentity';
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
@@ -252,9 +253,12 @@ export default function KeywordMatchClient() {
         {step === 'topics' && (
           <div>
             <h2 className="text-section font-medium mb-1">מה מעניין אותך?</h2>
-            <p className="text-ui text-ink-2 font-medium mb-6 leading-relaxed">
+            <p className="text-ui text-ink-2 font-medium mb-4 leading-relaxed">
               בחרי עד {MAX_TOPICS} תחומים. בשלב הבא תראי את הנושאים שבתוכם ותבחרי מה מדבר אלייך.
             </p>
+
+            {/* גם כאן: הבחירה בכמה תחומים מתחילה בשלב הזה */}
+            <WeightingNotice className="mb-6" />
 
             <div className="grid sm:grid-cols-2 gap-2.5">
               {CLUSTER_TOPICS.map(t => {
@@ -317,23 +321,7 @@ export default function KeywordMatchClient() {
               בחרי עד {MAX_CLUSTERS}. לכל נושא יש 2 עד 5 שאלות, ותעני רק על מה שבחרת.
             </p>
 
-            {/*
-              ההסבר הזה יושב כאן ולא בתוצאות, כי כאן עוד אפשר לפעול לפיו.
-
-              הציון הוא ממוצע על כל הנושאים שנבחרו, ולכן בחירה רחבה
-              מדללת: מי שחזק מאוד בנושא אחד מתוך שישה יקבל ציון בינוני,
-              ואי אפשר יהיה לדעת מהתוצאה אם הוא בינוני בכולם או מצוין
-              באחד. מי שיש לה נושא אחד שחשוב לה באמת מקבלת תשובה מדויקת
-              יותר אם תבחר אותו לבדו.
-            */}
-            <div className="mb-6 rounded-card border border-accent-lit bg-accent-wash px-4 py-3">
-              <p className="text-ui text-ink-2 leading-relaxed">
-                <strong className="text-ink font-semibold">שימי לב:</strong>{' '}
-                הציון של כל ח״כ הוא שקלול של כל הנושאים שתבחרי יחד. אם יש נושא
-                שחשוב לך יותר מהאחרים — כדאי לבחור אותו לבדו, אחרת התוצאה
-                תמצע אותו עם השאר.
-              </p>
-            </div>
+            <WeightingNotice className="mb-6" />
 
             {visibleClusters.map(({ topic, list }) => (
               <div key={topic.id} className="mb-6">

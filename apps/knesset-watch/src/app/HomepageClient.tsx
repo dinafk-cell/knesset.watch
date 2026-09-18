@@ -7,6 +7,7 @@ import { usePeriod, periodToDateRange } from '@/lib/period-context';
 import { CLUSTER_TOPICS } from '@/lib/axis-clusters';
 import { TOPIC_COLOR, TOPIC_FALLBACK } from '@/lib/ui/colors';
 import { Sparkline } from '@/components/Sparkline';
+import { WeightingNotice } from '@/components/WeightingNotice';
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -288,6 +289,8 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
             אותו גוון בשאלון, בתרשים ובכרטיסים, כדי שאפשר יהיה לעקוב
             אחריו בין מסכים בלי לקרוא את התווית בכל פעם.
           */}
+          <WeightingNotice className="mb-5" />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="group" aria-label="בחירת תחומים">
             {PICKABLE_DOMAINS.map(d => {
               const selected = homeDomains.includes(d.id);
