@@ -609,9 +609,24 @@ export default function KeywordMatchClient() {
                         </div>
                       </div>
 
+                      {/*
+                        הפס נצבע לפי סיעה, כמו בכל שאר האתר: נייבי לקואליציה
+                        וזהב לאופוזיציה.
+
+                        קודם הוא נצבע לפי דירוג — המקום הראשון בזהב והשאר
+                        בנייבי — ואותם שני צבעים כבר סימנו סיעה במקום אחר.
+                        התוצאה הייתה שארבע ח"כיות אופוזיציה נראו כאחת
+                        אופוזיציה ושלוש קואליציה. המקום הראשון מסומן ממילא
+                        במספר ובציון ואינו זקוק לצבע.
+
+                        accent-lit ולא accent: הראשון מיועד לרקעים, השני
+                        לטקסט על רקע בהיר.
+                      */}
                       <div className="mt-3 h-1.5 rounded-full bg-line overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all ${idx === 0 ? 'bg-accent' : 'bg-navy-deep'}`}
+                          className={`h-full rounded-full transition-all ${
+                            row.isCoalition ? 'bg-navy' : 'bg-accent-lit'
+                          }`}
                           style={{ width: `${Math.min(100, row.overallScore)}%` }}
                         />
                       </div>
