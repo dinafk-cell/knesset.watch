@@ -1742,5 +1742,20 @@
       }
     ],
     "billCount": 12
+  },
+  {
+    "clusterId": "cl_lgbt_rights",
+    "topic": "עבודה, זכויות ושוויון",
+    "label": "זכויות קהילת להט\"ב",
+    "billCount": 10,
+    "members": [
+      {
+        "issueId": "ax_conversion_therapy",
+        "originalKeyword": "איסור טיפולי המרה",
+        "subtopic": "זכויות פרט וקהילת להט\"ב",
+        "question": "האם לאסור בחוק טיפולי המרה?",
+        "billCount": 10
+      }
+    ]
   }
 ]
