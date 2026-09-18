@@ -184,7 +184,22 @@ async function main() {
   const axisPro = await embedAll(axes.map(a => a.proLabel), 'צד בעד');
   const axisCon = await embedAll(axes.map(a => a.conLabel), 'צד נגד');
   const rowVecs = await embedAll(rows.map(r => `${r.policyChange} ${r.pro} ${r.con}`), 'יתומות');
-  const rowPro = await embedAll(rows.map(r => r.pro), 'עמדת ההצעה');
+  /*
+    הצד נקבע מ-policy_change ולא מ-pro_stance.
+
+    pro_stance הוא הנימוק בעד ההצעה, והנימוקים משני צידי מחלוקת
+    כתובים באותה שפה: ״פגיעה נפשית קשה״ מול ״ענישה שאינה מידתית״.
+    שניהם משפטיים, שניהם רציניים, ולכן שניהם קרובים במידה דומה לשני
+    צידי הציר. מדדתי רטוריקה במקום מעשה.
+
+    policy_change אומר מה ההצעה עושה — ״נוכחות קטין תגרור החמרה או
+    כפל עונש״ — וזה חד־משמעי.
+
+    נמדד על 179 השורות שהצד בהן לא הוכרע:
+      pro_stance      9 נפתרות, חציון מרווח 0.0263
+      policy_change  91 נפתרות, חציון מרווח 0.0510
+  */
+  const rowPro = await embedAll(rows.map(r => r.policyChange), 'מה ההצעה עושה');
 
   // ── התאמה וקביעת צד ────────────────────────────────────────────────
   interface Match {
@@ -209,8 +224,8 @@ async function main() {
     if (bi < 0) continue;
 
     /*
-      הצד נקבע מהעמדה שההצעה מקדמת. pro_stance הוא הנימוק בעד השינוי
-      שההצעה עושה, ולכן הוא מייצג את עמדת ההצעה עצמה. משווים אותו
+      הצד נקבע ממה שההצעה עושה בפועל. policy_change מתאר את השינוי
+      החקיקתי, ולכן הוא מייצג את עמדת ההצעה. משווים אותו
       לשני צידי הציר ולוקחים את הקרוב.
 
       sideMargin הוא ההפרש בין השניים. מרווח קטן פירושו שהעמדה יושבת

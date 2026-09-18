@@ -13,8 +13,9 @@ export function WeightingNotice({ className = '' }: { className?: string }) {
     <div className={`rounded-card border border-accent-lit bg-accent-wash px-4 py-3 ${className}`}>
       <p className="text-ui text-ink-2 leading-relaxed">
         <strong className="text-ink font-semibold">שימי לב:</strong>{' '}
-        הציון של כל ח&quot;כ הוא שקלול של כל הנושאים שתבחרי יחד. אם יש נושא שחשוב
-        לך יותר מהאחרים — כדאי לבחור אותו לבדו, אחרת התוצאה תמצע אותו עם השאר.
+        הציון של כל ח&quot;כ הוא ממוצע על כל הנושאים שתבחרי. אם יש נושא שחשוב
+        לך יותר מהאחרים — כדאי לבחור אותו לבדו, אחרת ח&quot;כ שחזק דווקא בו
+        יקבל ציון בינוני בגלל הנושאים האחרים.
       </p>
     </div>
   );
