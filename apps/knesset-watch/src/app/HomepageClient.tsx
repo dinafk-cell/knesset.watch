@@ -280,7 +280,7 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
           */}
           <h2 className="text-page mb-2">מי עובד בשבילך?</h2>
           <p className="text-body text-ink-2 mb-5">
-            בחרי עד שלושה תחומים שחשובים לך, ונדרג את חברי הכנסת לפי מידת
+            אפשר לבחור עד שלושה תחומים שחשובים לך, ונדרג את חברי הכנסת לפי מידת
             הפעילות שלהם — הצעות חוק שיזמו והצבעות שתמכו בהן.
           </p>
 
@@ -339,7 +339,7 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
             <span className="text-label text-ink-2">
               {homeDomains.length > 0
                 ? `${homeDomains.length === 1 ? 'נבחר תחום אחד' : `נבחרו ${homeDomains.length} תחומים`} מתוך ${HOME_DOMAIN_PICKS}`
-                : `בחרי עד ${HOME_DOMAIN_PICKS} תחומים כדי להתחיל`}
+                : `אפשר לבחור עד ${HOME_DOMAIN_PICKS} תחומים כדי להתחיל`}
             </span>
           </div>
         </div>

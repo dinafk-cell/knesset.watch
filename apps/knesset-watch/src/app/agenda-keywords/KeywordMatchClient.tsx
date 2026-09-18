@@ -254,7 +254,7 @@ export default function KeywordMatchClient() {
           <div>
             <h2 className="text-section font-medium mb-1">מה מעניין אותך?</h2>
             <p className="text-ui text-ink-2 font-medium mb-4 leading-relaxed">
-              בחרי עד {MAX_TOPICS} תחומים. בשלב הבא תראי את הנושאים שבתוכם ותבחרי מה מדבר אלייך.
+              אפשר לבחור עד {MAX_TOPICS} תחומים. בשלב הבא יופיעו הנושאים שבתוכם, ואפשר לבחור מה מהם מדבר אליך.
             </p>
 
             {/* גם כאן: הבחירה בכמה תחומים מתחילה בשלב הזה */}
@@ -306,7 +306,7 @@ export default function KeywordMatchClient() {
               </button>
               <span className="text-label text-ink-2">
                 {topics.length === 0
-                  ? 'בחרי לפחות תחום אחד'
+                  ? 'צריך לבחור לפחות תחום אחד'
                   : `${topics.length === 1 ? 'נבחר תחום אחד' : `נבחרו ${topics.length} תחומים`} מתוך ${MAX_TOPICS}`}
               </span>
             </StickyBar>
@@ -318,7 +318,7 @@ export default function KeywordMatchClient() {
           <div>
             <h2 className="text-section font-medium mb-1">אילו נושאים חשובים לך?</h2>
             <p className="text-ui text-ink-2 font-medium mb-4 leading-relaxed">
-              בחרי עד {MAX_CLUSTERS}. לכל נושא יש 2 עד 5 שאלות, ותעני רק על מה שבחרת.
+              אפשר לבחור עד {MAX_CLUSTERS}. לכל נושא יש 2 עד 5 שאלות, ואפשר לענות רק על מה שנבחר.
             </p>
 
             <WeightingNotice className="mb-6" />
@@ -388,7 +388,7 @@ export default function KeywordMatchClient() {
               </button>
               <span className="text-label text-ink-2">
                 {clusters.length === 0
-                  ? 'בחרי לפחות נושא אחד'
+                  ? 'צריך לבחור לפחות נושא אחד'
                   : `${countLabel(clusters.length, 'נושא אחד', 'נושאים')} · ${countLabel(questionCount, 'שאלה אחת', 'שאלות')}`}
               </span>
             </StickyBar>

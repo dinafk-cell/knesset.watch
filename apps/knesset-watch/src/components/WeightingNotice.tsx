@@ -7,13 +7,17 @@
  *
  * ההודעה יושבת בכל מקום שבו בוחרים — עמוד הבית, שלב התחומים ושלב
  * הנושאים — ולא בתוצאות. בתוצאות כבר אי אפשר לפעול לפיה.
+ *
+ * הניסוח נמנע מפועל בגוף שני, כי בעברית הוא מחייב לבחור מין: "שתבחרי"
+ * או "שתבחר". מקור עקיף — "שנבחרו", "אפשר לבחור" — פונה לכולם.
+ * כינויי שייכות כמו "לך" ו"לבך" נכתבים ממילא זהה בשני המינים.
  */
 export function WeightingNotice({ className = '' }: { className?: string }) {
   return (
     <div className={`rounded-card border border-accent-lit bg-accent-wash px-4 py-3 ${className}`}>
       <p className="text-ui text-ink-2 leading-relaxed">
-        <strong className="text-ink font-semibold">שימי לב:</strong>{' '}
-        הציון של כל ח&quot;כ הוא ממוצע על כל הנושאים שתבחרי. אם יש נושא שחשוב
+        <strong className="text-ink font-semibold">לתשומת לבך:</strong>{' '}
+        הציון של כל ח&quot;כ הוא ממוצע על כל הנושאים שנבחרו. אם יש נושא שחשוב
         לך יותר מהאחרים — כדאי לבחור אותו לבדו, אחרת ח&quot;כ שחזק דווקא בו
         יקבל ציון בינוני בגלל הנושאים האחרים.
       </p>

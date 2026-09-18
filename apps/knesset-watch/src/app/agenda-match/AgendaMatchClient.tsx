@@ -288,7 +288,7 @@ export default function AgendaMatchClient() {
           <div>
             <h1 className="text-section font-medium leading-tight">מי עובד בשביל מה שחשוב לך</h1>
             <p className="text-meta text-mute mt-0.5 font-medium">
-              דירוג חברי הכנסת לפי מידת הפעילות שלהם בנושאים שתבחרי — כנסת 25
+              דירוג חברי הכנסת לפי מידת הפעילות שלהם בנושאים שנבחרו — כנסת 25
             </p>
           </div>
         </div>
@@ -324,7 +324,7 @@ export default function AgendaMatchClient() {
             כדי שההיררכיה תחום ← אג'נדה תיקרא מיד. */}
         {step === 'domains' && (
           <div>
-            <h2 className="text-section font-medium mb-1">בחרי עד שלושה תחומים</h2>
+            <h2 className="text-section font-medium mb-1">אפשר לבחור עד שלושה תחומים</h2>
             <p className="text-ui text-mute mb-5 font-medium">
               נבחרו {domains.length} מתוך {DOMAIN_PICKS}
             </p>
