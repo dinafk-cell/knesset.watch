@@ -1747,7 +1747,7 @@
     "clusterId": "cl_lgbt_rights",
     "topic": "עבודה, זכויות ושוויון",
     "label": "זכויות קהילת להט\"ב",
-    "billCount": 10,
+    "billCount": 37,
     "members": [
       {
         "issueId": "ax_conversion_therapy",
@@ -1755,6 +1755,20 @@
         "subtopic": "זכויות פרט וקהילת להט\"ב",
         "question": "האם לאסור בחוק טיפולי המרה?",
         "billCount": 10
+      },
+      {
+        "issueId": "ax_lgbt_antidiscrimination",
+        "originalKeyword": "איסור הפליה על רקע נטייה מינית וזהות מגדרית",
+        "subtopic": "זכויות פרט וקהילת להט\"ב",
+        "question": "האם להרחיב את איסור ההפליה לנטייה מינית ולזהות מגדרית?",
+        "billCount": 19
+      },
+      {
+        "issueId": "ax_lgbt_hate_crime",
+        "originalKeyword": "פשעי שנאה על רקע נטייה מינית וזהות מגדרית",
+        "subtopic": "זכויות פרט וקהילת להט\"ב",
+        "question": "האם להכיר בפגיעה על רקע נטייה מינית כפשע שנאה?",
+        "billCount": 8
       }
     ]
   }
