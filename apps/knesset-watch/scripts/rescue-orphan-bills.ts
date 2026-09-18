@@ -44,6 +44,8 @@ const DIMS = 256;
 const CACHE = path.join(process.cwd(), '.embed-cache.json');
 const OUT = path.join(process.cwd(), 'orphan-rescue.jsonl');
 const REPORT = path.join(process.cwd(), 'orphan-rescue-report.txt');
+/** מה שלא עבר — לסיווג ידני, עם שלושה מועמדים לכל שורה */
+const MANUAL = path.join(process.cwd(), 'orphan-manual-review.csv');
 
 const arg = (name: string) => {
   const i = process.argv.indexOf(name);
@@ -51,6 +53,13 @@ const arg = (name: string) => {
 };
 const LIMIT = Number(arg('--limit')) || Infinity;
 const THRESHOLD = Number(arg('--threshold')) || 0.65;
+/*
+  מרווח הצד: ההפרש בין קרבת העמדה לצד "בעד" לקרבתה לצד "נגד".
+  מרווח אפסי פירושו שהעמדה יושבת באמצע הציר ואי אפשר לדעת לאיזה צד
+  היא שייכת. סיווג כזה אינו "כמעט נכון" — הוא הטלת מטבע, ושיוך ח"כ
+  לעמדה שלא נקט גרוע מאי-סיווג.
+*/
+const MIN_MARGIN = Number(arg('--min-margin')) || 0.05;
 
 const jinaKey = (() => {
   for (const line of fs.readFileSync('.env.local', 'utf8').split('\n')) {
@@ -179,6 +188,7 @@ async function main() {
     billId: number; billTitle: string; issueCandidate: string;
     axisId: string; axisQuestion: string; score: number;
     side: 'pro' | 'con'; stanceId: string; sideMargin: number;
+    alternatives: Array<{ id: string; question: string; score: number }>;
   }
   const matches: Match[] = [];
 
@@ -186,13 +196,13 @@ async function main() {
     const v = rowVecs[i], p = rowPro[i];
     if (!v || !p) continue;
 
-    let bi = -1, bs = -1;
-    for (let j = 0; j < axes.length; j++) {
-      const av = axisVecs[j];
-      if (!av) continue;
-      const s = cos(v, av);
-      if (s > bs) { bs = s; bi = j; }
-    }
+    // שלושת הקרובים, כדי שהבדיקה הידנית תוכל לבחור ולא רק לאשר
+    const ranked = axes
+      .map((a, j) => ({ j, s: axisVecs[j] ? cos(v, axisVecs[j]!) : -1 }))
+      .sort((x, y) => y.s - x.s)
+      .slice(0, 3);
+    const bi = ranked[0]?.j ?? -1;
+    const bs = ranked[0]?.s ?? -1;
     if (bi < 0) continue;
 
     /*
@@ -218,6 +228,7 @@ async function main() {
       side,
       stanceId: side === 'pro' ? axes[bi].proId : axes[bi].conId,
       sideMargin: Math.abs(simPro - simCon),
+      alternatives: ranked.map(r => ({ id: axes[r.j].id, question: axes[r.j].question, score: r.s })),
     });
   }
 
@@ -233,11 +244,15 @@ async function main() {
     say(`  ${t.toFixed(2).padStart(5)}  ${String(hit.length).padStart(7)}  ${String(bills).padStart(10)}  ${String(Math.round(bills / ids.length * 100) + '%').padStart(11)}`);
   }
 
-  const kept = matches.filter(m => m.score >= THRESHOLD);
+  const passScore = matches.filter(m => m.score >= THRESHOLD);
+  const kept = passScore.filter(m => m.sideMargin >= MIN_MARGIN);
+  const ambiguous = passScore.filter(m => m.sideMargin < MIN_MARGIN);
+  const belowScore = matches.filter(m => m.score < THRESHOLD);
   say(`\n═══ בסף ${THRESHOLD} ═══`);
   say(`  שורות      : ${kept.length.toLocaleString()}`);
   say(`  הצעות חוק  : ${new Set(kept.map(m => m.billId)).size.toLocaleString()}`);
   say(`  צירים שונים: ${new Set(kept.map(m => m.axisId)).size}`);
+  say(`  נפלו על מרווח צד < ${MIN_MARGIN}: ${ambiguous.length}`);
   say(`  בעד / נגד  : ${kept.filter(m => m.side === 'pro').length} / ${kept.filter(m => m.side === 'con').length}`);
 
   const margins = kept.map(m => m.sideMargin).sort((a, b) => a - b);
@@ -258,10 +273,42 @@ async function main() {
   }
 
   fs.writeFileSync(OUT, kept.map(m => JSON.stringify(m)).join('\n') + '\n');
+
+  /*
+    לסיווג ידני: כל מה שלא עבר, עם שלושת הצירים הקרובים ביותר ועם
+    העמדות עצמן. שתי העמודות האחרונות ריקות ומיועדות למילוי — מזהה
+    הציר הנבחר, וצד. מי שממלא אותן אינו צריך לחפש: המועמדים כאן.
+  */
+  const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+  const byBillIssue = new Map<string, Row>();
+  for (const r of rows) byBillIssue.set(`${r.billId}|${r.issueCandidate}`, r);
+
+  const needManual = [...ambiguous, ...belowScore];
+  const header = [
+    'bill_id', 'סיבת הדחייה', 'כותרת החוק', 'הסוגיה', 'עמדת בעד', 'עמדת נגד',
+    'מועמד 1', 'ציון 1', 'מועמד 2', 'ציון 2', 'מועמד 3', 'ציון 3',
+    'ציר נבחר (למילוי)', 'צד pro/con (למילוי)',
+  ];
+  const csv = [header.map(esc).join(',')];
+  for (const m of needManual) {
+    const src = byBillIssue.get(`${m.billId}|${m.issueCandidate}`);
+    const reason = m.score < THRESHOLD ? `ציון ${m.score.toFixed(3)}` : `מרווח צד ${m.sideMargin.toFixed(3)}`;
+    csv.push([
+      String(m.billId), reason, m.billTitle, m.issueCandidate,
+      src?.pro ?? '', src?.con ?? '',
+      m.alternatives[0]?.question ?? '', (m.alternatives[0]?.score ?? 0).toFixed(3),
+      m.alternatives[1]?.question ?? '', (m.alternatives[1]?.score ?? 0).toFixed(3),
+      m.alternatives[2]?.question ?? '', (m.alternatives[2]?.score ?? 0).toFixed(3),
+      '', '',
+    ].map(esc).join(','));
+  }
+  // BOM כדי ש-Excel יקרא עברית נכון
+  fs.writeFileSync(MANUAL, '\uFEFF' + csv.join('\n') + '\n');
   fs.writeFileSync(REPORT, lines.join('\n') + '\n');
   say(`\n\nנכתבו:`);
   say(`  ${path.basename(OUT)}     ${kept.length.toLocaleString()} התאמות`);
   say(`  ${path.basename(REPORT)}  הדוח הזה`);
+  say(`  ${path.basename(MANUAL)}  ${needManual.length.toLocaleString()} שורות לסיווג ידני`);
   say('\nלא נכתב דבר למסד. הטבלה bill_political_classification לא נגעה.');
 }
 
