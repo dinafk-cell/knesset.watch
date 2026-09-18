@@ -283,7 +283,13 @@ async function main() {
   const byBillIssue = new Map<string, Row>();
   for (const r of rows) byBillIssue.set(`${r.billId}|${r.issueCandidate}`, r);
 
-  const needManual = [...ambiguous, ...belowScore];
+  /*
+    הצעה יכולה לשאת כמה סוגיות. אם אחת מהן כן נמצאה, ההצעה מסווגת —
+    ואין טעם לשלוח את השורות האחרות שלה לבדיקה ידנית. 73 מתוך 1,633
+    היו כאלה.
+  */
+  const classifiedNow = new Set(kept.map(m => m.billId));
+  const needManual = [...ambiguous, ...belowScore].filter(m => !classifiedNow.has(m.billId));
   const header = [
     'bill_id', 'סיבת הדחייה', 'כותרת החוק', 'הסוגיה', 'עמדת בעד', 'עמדת נגד',
     'מועמד 1', 'ציון 1', 'מועמד 2', 'ציון 2', 'מועמד 3', 'ציון 3',
