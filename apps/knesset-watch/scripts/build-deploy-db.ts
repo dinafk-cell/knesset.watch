@@ -89,6 +89,23 @@ function main(): void {
     db.exec('CREATE INDEX IF NOT EXISTS idx_bpi_bill ON bill_policy_issue(bill_id)');
   }
 
+  /*
+    ── שיוך ההצעות לצירים ─────────────────────────────────────────────────
+
+    זה מה שהשאלון קורא ממנו, והוא לא הועתק כאן עד עכשיו. הסקריפט רק
+    ודא בסוף שהטבלה קיימת ושהצטרפות אליה עובדת — ושתיהן היו נכונות גם
+    כשהתוכן היה מיושן בחודשים. התוצאה: 467 הצעות שמוזגו ו-37 שיוכי
+    להט"ב עבדו מקומית והשאלון בפרודקשן החזיר עליהן ריק.
+  */
+  console.log(`bill_political_classification : ${count('bill_political_classification')} rows in source ` +
+              `(${count('bill_political_classification', 'main')} in target)`);
+  if (!dryRun) {
+    db.exec('DELETE FROM bill_political_classification');
+    db.exec(`INSERT INTO bill_political_classification (bill_id, issue_id, stance_id)
+             SELECT bill_id, issue_id, stance_id FROM src.bill_political_classification`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_bpc_issue ON bill_political_classification(issue_id)');
+  }
+
   // ── the full bill text, only when asked for ────────────────────────────
   if (withText) {
     console.log('bill.text_content    : copying — this adds roughly 50MB');
@@ -142,6 +159,20 @@ function main(): void {
      'SELECT b.id, a.overall_summary FROM bill b LEFT JOIN bill_policy_analysis a ON a.bill_id = b.id LIMIT 1');
   ok('cluster → bills',
      'SELECT b.id FROM bill_political_classification c JOIN bill b ON b.id = c.bill_id LIMIT 1');
+
+  /*
+    בדיקה שהשאילתה עוברת אינה מספיקה — היא עברה גם כשהתוכן היה מיושן.
+    כאן משווים ספירות מול המקור, כי זה מה שבאמת נשבר.
+  */
+  const src = new Database(SOURCE, { readonly: true });
+  console.log('');
+  console.log('השוואת ספירות מול knesset.db:');
+  for (const t of ['bill_policy_analysis', 'bill_policy_issue', 'bill_political_classification']) {
+    const a = (src.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number }).n;
+    const b = (check.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number }).n;
+    console.log(`  ${a === b ? '✓' : '✗'} ${t.padEnd(30)} ${a.toLocaleString()} → ${b.toLocaleString()}`);
+  }
+  src.close();
   check.close();
 }
 
