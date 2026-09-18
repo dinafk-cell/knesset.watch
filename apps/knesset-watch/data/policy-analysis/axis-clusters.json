@@ -57,9 +57,16 @@
         "subtopic": "זכויות אסירים ותנאי כליאה",
         "question": "האם יש להרחיב את זכויותיהם ומעמדם של אסירים במערכת הכליאה?",
         "billCount": 8
+      },
+      {
+        "issueId": "ax_cult_abuse",
+        "originalKeyword": "הפללת ניהול כת פוגענית",
+        "subtopic": "כתות פוגעניות ופגיעה מאורגנת",
+        "question": "האם להפליל את ניהול הכת הפוגענית כעבירה עצמאית?",
+        "billCount": 5
       }
     ],
-    "billCount": 532
+    "billCount": 537
   },
   {
     "clusterId": "cl_000",
