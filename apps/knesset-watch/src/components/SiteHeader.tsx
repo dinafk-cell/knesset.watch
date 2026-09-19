@@ -318,8 +318,16 @@ export default function SiteHeader() {
     >
       <div className="px-4 h-11 flex items-center gap-4">
         {/* Logo — mobile only (desktop shows in sidebar) */}
-        <Link href="/" className="md:hidden font-content text-section font-bold hover:text-accent transition-colors shrink-0">
-          אפרכסת לכנסת
+        <Link
+          href="/"
+          className="md:hidden flex items-center justify-center shrink-0"
+          aria-label="אפרכסת לכנסת — דף הבית"
+        >
+          <img
+            src="/logo.svg"
+            alt=""
+            className="h-8 w-auto"
+          />
         </Link>
         <div className="flex-1" />
         <PeriodSelector />
