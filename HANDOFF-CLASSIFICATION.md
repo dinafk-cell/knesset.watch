@@ -179,7 +179,72 @@ orphan-sides.jsonl           צדדים מאומתים
 
 ---
 
-## 8. פתוח
+## 8. דיפלוי — איך זה עובד כאן
+
+### שלושה יעדי דחיפה, תמיד יחד
+
+```bash
+git push origin dina          # ענף העבודה
+git push origin dina:dev      # dev בריפו הראשי
+git push fork dina:main       # main בפורק של דינה
+```
+
+`origin` = `knesset-watch/knesset.watch` (הריפו המשותף)
+`fork`   = `dinafk-cell/knesset.watch` (הפורק של דינה)
+
+`dina` ו-`origin/dev` מוחזקים זהים. **`origin/main` הוא ענף נפרד שארבל
+עובדת מולו, והוא מפגר** — נכון ל-19.9.2026 יש בו 2 קומיטים שלה ו-53
+קומיטים שלנו חסרים בו.
+
+### הבנייה מגישה מסד אחר
+
+```json
+// apps/knesset-watch/vercel.json
+"buildCommand": "cp knesset-deploy.db knesset.db && npm run build"
+```
+
+אותה פקודה מוגדרת גם ב-Build Command של Render. כלומר **הפרודקשן אינו
+רץ על `knesset.db` המקומי** אלא על `knesset-deploy.db`, שהוא קובץ בן 97MB
+**במעקב גיט** (חריג ל-gitignore, ראו `.gitignore` שורה 37).
+
+### מכאן נובע הכלל החשוב ביותר
+
+> **שינוי במסד אינו מגיע לפרודקשן עד שמריצים `build-deploy-db.ts` ודוחפים
+> את הקובץ.**
+
+```bash
+npx tsx scripts/build-deploy-db.ts    # מעתיק מ-knesset.db ל-knesset-deploy.db
+git add apps/knesset-watch/knesset-deploy.db
+# ואז שלוש הדחיפות
+```
+
+הסקריפט מסיים בהשוואת ספירות מול `knesset.db` ומדפיס ✓ או ✗ לכל טבלה.
+**אם יש ✗ — לא לדחוף.** הבדיקה הזו נוספה אחרי שהתגלה שהסקריפט לא העתיק
+כלל את `bill_political_classification` במשך חודשיים, והבדיקות הישנות
+("הטבלה קיימת", "ההצטרפות עובדת") עברו בהצלחה כל אותו זמן.
+
+GitHub מזהיר על הגודל (`GH001: Large files detected`) — **זה אזהרה ולא
+שגיאה**, הדחיפה מצליחה.
+
+### מה עובר בגיט ומה לא
+
+| עובר | לא עובר |
+|---|---|
+| `knesset-deploy.db` (97MB) | `knesset.db` המקומי (232MB) |
+| קוד, `axis-catalog.json`, `axis-clusters.json` | `.env.local`, מפתחות API |
+| | כל קובצי ה-CSV וה-XLSX (ב-gitignore) |
+
+### אימות אחרי דיפלוי
+
+האתר **https://knesset.watch** מאחורי `AUTHORIZE`. אין דרך לאמת אוטומטית
+מכאן — צריך להיכנס ידנית ולבדוק.
+
+**מה לא ידוע לי:** מאיזה ענף Render בונה בפועל. זה מוגדר בדשבורד של
+Render ולא בריפו. כדאי לוודא מול דינה לפני שמניחים.
+
+---
+
+## 9. פתוח
 
 1. **1,969 השינויים** — לאשר, לדחות נקודתית, או לפצל (מעברים עכשיו, מחיקות אחרי הצירים החסרים)
 2. **249 מחיקות ב"ביטחון בינוני"** — יש להן ציר מועמד ורק הוודאות חסרה. אפשר לסקור במקום למחוק
