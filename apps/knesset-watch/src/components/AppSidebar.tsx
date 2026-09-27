@@ -27,12 +27,13 @@ export default function AppSidebar({ aiEnabled = true }: { aiEnabled?: boolean }
           aria-label="אפרכסת לכנסת — דף הבית"
         >
           <img
-            src="/logo-dark.svg"
+            src="/logo-mark-dark.png"
             alt=""
             className="h-16 w-auto"
           />
+          {/* שתי המילים בשני צבעים, כמו בלוגו עצמו */}
           <span className="font-content text-section font-bold text-white">
-            אפרכסת לכנסת
+            אפרכסת <span className="text-brand">לכנסת</span>
           </span>
         </Link>
       </div>
