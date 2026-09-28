@@ -1,134 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePeriod, PERIOD_SHORTCUTS, periodLabel } from '@/lib/period-context';
 import { NAV_GROUPS, AI_LINK, isNavActive } from '@/lib/nav';
-
-interface SearchHit {
-  type: 'mk' | 'committee' | 'bill';
-  id: string;
-  title: string;
-  subtitle: string | null;
-  url: string;
-}
-
-const TYPE_LABEL: Record<string, string> = {
-  mk: 'ח"כ',
-  committee: 'ועדה',
-  bill: 'חוק',
-};
-
-function GlobalSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchHit[]>([]);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (query.length < 2) { setResults([]); setOpen(false); return; }
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        if (!res.ok) return;
-        const data = await res.json() as { results: SearchHit[] };
-        setResults(data.results ?? []);
-        setOpen(true);
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  // Close on outside click
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  function navigate(url: string) {
-    setOpen(false);
-    setQuery('');
-    router.push(url);
-  }
-
-  return (
-    <div ref={containerRef} className="relative w-32 sm:w-48 md:w-64">
-      <div className="flex items-center border border-line rounded-control px-2.5 py-1 bg-surface focus-within:border-accent transition-colors">
-        <svg className="w-3.5 h-3.5 text-mute shrink-0 ml-1.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="6.5" cy="6.5" r="4.5"/>
-          <path d="m10 10 4 4"/>
-        </svg>
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Escape') { setOpen(false); setQuery(''); }
-            if (e.key === 'Enter' && query.trim().length >= 2) {
-              setOpen(false);
-              setQuery('');
-              router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-            }
-          }}
-          placeholder="חיפוש..."
-          aria-label='חיפוש בח"כים, ועדות וחוקים'
-          className="flex-1 bg-transparent text-meta font-medium placeholder:text-mute placeholder:font-normal min-w-0"
-          dir="rtl"
-        />
-        {loading && (
-          <svg className="w-3 h-3 text-mute animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-        )}
-      </div>
-
-      {open && results.length > 0 && (
-        <div className="absolute top-full mt-1 right-0 w-72 bg-surface border border-line rounded-card shadow-lg overflow-hidden z-50" dir="rtl">
-          {results.slice(0, 8).map(hit => (
-            <button
-              key={`${hit.type}-${hit.id}`}
-              onClick={() => navigate(hit.url)}
-              className="w-full text-right flex items-center gap-3 px-3 py-2.5 hover:bg-surface-2 transition-colors"
-            >
-              <span className="text-meta font-medium text-mute w-7 shrink-0 text-center">
-                {TYPE_LABEL[hit.type] ?? hit.type}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-ui font-medium truncate">{hit.title}</div>
-                {hit.subtitle && <div className="text-meta text-mute truncate">{hit.subtitle}</div>}
-              </div>
-            </button>
-          ))}
-          <button
-            onClick={() => { setOpen(false); setQuery(''); router.push(`/search?q=${encodeURIComponent(query.trim())}`); }}
-            className="w-full text-center px-3 py-2 border-t border-line-soft text-meta font-medium text-accent hover:bg-surface-2 transition-colors"
-          >
-            ראה את כל התוצאות ←
-          </button>
-        </div>
-      )}
-      {open && results.length === 0 && !loading && query.length >= 2 && (
-        <div className="absolute top-full mt-1 right-0 w-64 bg-surface border border-line rounded-card shadow-lg p-3 text-meta text-mute text-center z-50">
-          לא נמצאו תוצאות
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Calendar helpers ──────────────────────────────────────────────────────────
 
@@ -298,7 +174,14 @@ function PeriodSelector() {
 }
 
 
-export default function SiteHeader() {
+/**
+ * שני מצבים, כי ההירו (לוגו + חיפוש) יושב עכשיו בכל עמוד, מעל הסיידבר:
+ *   top      הפס של הטלפון, מעל ההירו: כפתור התפריט, והפילטר בעמודים הפנימיים.
+ *   default  הפס של הדסקטופ בעמודים הפנימיים, בתוך עמודת התוכן: הפילטר בלבד.
+ *            בעמוד הבית אין אותו, כי למספרים שם יש פילטר משלהם.
+ * החיפוש שהיה כאן ירד: תיבת החיפוש המאוחדת בהירו מכסה אותו.
+ */
+export default function SiteHeader({ mode = 'default' }: { mode?: 'top' | 'default' }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -310,62 +193,44 @@ export default function SiteHeader() {
   }, [pathname, closeMenu]);
 
   if (pathname === '/login') return null;
-
-  /*
-    בעמוד הבית ההירו מחליף את הכותרת: הלוגו והחיפוש יושבים בו, והמספרים
-    מקבלים פילטר תקופה משלהם. לכן בדסקטופ הכותרת לא מוצגת שם בכלל,
-    ובטלפון, שבו הסיידבר מוסתר, היא נשארת רק בשביל הלוגו וכפתור התפריט.
-  */
   const isHome = pathname === '/';
+  if (mode === 'default' && isHome) return null;
+  const top = mode === 'top';
 
   return (
     <header
-      className={`sticky top-0 z-30 w-full bg-paper/90 backdrop-blur border-b border-line ${isHome ? 'md:hidden' : ''}`}
+      className={`sticky top-0 z-30 w-full bg-paper/90 backdrop-blur border-b border-line ${top ? 'md:hidden' : 'hidden md:block'}`}
       dir="rtl"
     >
       <div className="px-4 h-11 flex items-center gap-4">
-        {/* Logo — mobile only (desktop shows in sidebar) */}
-        <Link
-          href="/"
-          className="md:hidden flex items-center justify-center shrink-0 hover:opacity-70 transition-opacity"
-          aria-label="אפרכסת לכנסת — דף הבית"
-        >
-          <img
-            src="/logo.svg"
-            alt=""
-            className="h-8 w-auto"
-          />
-        </Link>
         <div className="flex-1" />
         {!isHome && <PeriodSelector />}
-        {!isHome && <GlobalSearch />}
-        {/* Hamburger button — mobile only */}
-        <button
-          onClick={() => setMenuOpen(o => !o)}
-          className="md:hidden flex items-center justify-center w-9 h-9 rounded-control hover:bg-surface-2 transition-colors shrink-0"
-          aria-label={menuOpen ? 'סגור תפריט' : 'פתח תפריט'}
-          aria-expanded={menuOpen}
-          aria-controls="mobile-nav"
-        >
-          {menuOpen ? (
-            <svg className="w-5 h-5 text-ink-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M4 4l12 12M16 4L4 16"/>
-            </svg>
-          ) : (
-            <svg className="w-5 h-5 text-ink-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M3 5h14M3 10h14M3 15h14"/>
-            </svg>
-          )}
-        </button>
+        {top && (
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="flex items-center justify-center w-9 h-9 rounded-control hover:bg-surface-2 transition-colors shrink-0"
+            aria-label={menuOpen ? 'סגור תפריט' : 'פתח תפריט'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+          >
+            {menuOpen ? (
+              <svg className="w-5 h-5 text-ink-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M4 4l12 12M16 4L4 16"/>
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-ink-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M3 5h14M3 10h14M3 15h14"/>
+              </svg>
+            )}
+          </button>
+        )}
       </div>
 
-      {/* תפריט מובייל — מוזן מאותו מקור כמו הסיידבר, כולל הקיבוץ.
-           לפני זה היו כאן 7 קישורים שטוחים מול 10 מקובצים בדסקטופ, ולכן
-           פולס, מעקב חקיקה, אג'נדות ורשת קשרים לא היו נגישים במובייל כלל. */}
-      {menuOpen && (
+      {/* תפריט מובייל — מוזן מאותו מקור כמו הסיידבר, כולל הקיבוץ. */}
+      {top && menuOpen && (
         <div
           id="mobile-nav"
-          className="md:hidden border-t border-line bg-surface"
+          className="border-t border-line bg-surface"
           dir="rtl"
         >
           <nav className="px-4 py-3 flex flex-col gap-4" aria-label="ניווט ראשי">
@@ -404,7 +269,6 @@ export default function SiteHeader() {
           </nav>
         </div>
       )}
-
     </header>
   );
 }
