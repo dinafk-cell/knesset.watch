@@ -4,131 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePeriod, PERIOD_SHORTCUTS, periodLabel } from '@/lib/period-context';
-import { NAV_GROUPS, AI_LINK, isNavActive } from '@/lib/nav';
-
-interface SearchHit {
-  type: 'mk' | 'committee' | 'bill';
-  id: string;
-  title: string;
-  subtitle: string | null;
-  url: string;
-}
-
-const TYPE_LABEL: Record<string, string> = {
-  mk: 'ח"כ',
-  committee: 'ועדה',
-  bill: 'חוק',
-};
-
-function GlobalSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchHit[]>([]);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (query.length < 2) { setResults([]); setOpen(false); return; }
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        if (!res.ok) return;
-        const data = await res.json() as { results: SearchHit[] };
-        setResults(data.results ?? []);
-        setOpen(true);
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  // Close on outside click
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  function navigate(url: string) {
-    setOpen(false);
-    setQuery('');
-    router.push(url);
-  }
-
-  return (
-    <div ref={containerRef} className="relative w-32 sm:w-48 md:w-64">
-      <div className="flex items-center border border-line rounded-control px-2.5 py-1 bg-surface focus-within:border-accent transition-colors">
-        <svg className="w-3.5 h-3.5 text-mute shrink-0 ml-1.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="6.5" cy="6.5" r="4.5"/>
-          <path d="m10 10 4 4"/>
-        </svg>
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Escape') { setOpen(false); setQuery(''); }
-            if (e.key === 'Enter' && query.trim().length >= 2) {
-              setOpen(false);
-              setQuery('');
-              router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-            }
-          }}
-          placeholder="חיפוש..."
-          aria-label='חיפוש בח"כים, ועדות וחוקים'
-          className="flex-1 bg-transparent text-meta font-medium placeholder:text-mute placeholder:font-normal min-w-0"
-          dir="rtl"
-        />
-        {loading && (
-          <svg className="w-3 h-3 text-mute animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-        )}
-      </div>
-
-      {open && results.length > 0 && (
-        <div className="absolute top-full mt-1 right-0 w-72 bg-surface border border-line rounded-card shadow-lg overflow-hidden z-50" dir="rtl">
-          {results.slice(0, 8).map(hit => (
-            <button
-              key={`${hit.type}-${hit.id}`}
-              onClick={() => navigate(hit.url)}
-              className="w-full text-right flex items-center gap-3 px-3 py-2.5 hover:bg-surface-2 transition-colors"
-            >
-              <span className="text-meta font-medium text-mute w-7 shrink-0 text-center">
-                {TYPE_LABEL[hit.type] ?? hit.type}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-ui font-medium truncate">{hit.title}</div>
-                {hit.subtitle && <div className="text-meta text-mute truncate">{hit.subtitle}</div>}
-              </div>
-            </button>
-          ))}
-          <button
-            onClick={() => { setOpen(false); setQuery(''); router.push(`/search?q=${encodeURIComponent(query.trim())}`); }}
-            className="w-full text-center px-3 py-2 border-t border-line-soft text-meta font-medium text-accent hover:bg-surface-2 transition-colors"
-          >
-            ראה את כל התוצאות ←
-          </button>
-        </div>
-      )}
-      {open && results.length === 0 && !loading && query.length >= 2 && (
-        <div className="absolute top-full mt-1 right-0 w-64 bg-surface border border-line rounded-card shadow-lg p-3 text-meta text-mute text-center z-50">
-          לא נמצאו תוצאות
-        </div>
-      )}
-    </div>
-  );
-}
+import { NAV_GROUPS, HOME_LINK, FOOTER_LINK, isNavActive, type NavLink } from '@/lib/nav';
+import { UnifiedSearch } from '@/components/UnifiedSearch';
 
 // ── Calendar helpers ──────────────────────────────────────────────────────────
 
@@ -298,7 +175,27 @@ function PeriodSelector() {
 }
 
 
-export default function SiteHeader() {
+/** פריט בתפריט המובייל. אותו סימון פעיל כמו בסיידבר, בגרסה של רשימה. */
+function MobileLink({ link, pathname, onClick, className = '' }: { link: NavLink; pathname: string; onClick: () => void; className?: string }) {
+  const active = isNavActive(pathname, link.prefixes);
+  return (
+    <Link
+      href={link.href}
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      className={`block text-ui py-2.5 px-3 rounded-control border-r-2 transition-colors ${
+        active
+          ? 'bg-accent-wash text-accent-ink font-medium border-accent'
+          : 'text-ink-2 border-transparent hover:bg-surface-2'
+      } ${className}`}
+    >
+      {link.label}
+    </Link>
+  );
+}
+
+/** aiEnabled מגיע מ-layout: דגל שרת שמאפשר לכבות את פיצ'רי ה-AI */
+export default function SiteHeader({ aiEnabled = true }: { aiEnabled?: boolean }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -330,15 +227,16 @@ export default function SiteHeader() {
           className="md:hidden flex items-center justify-center shrink-0 hover:opacity-70 transition-opacity"
           aria-label="אפרכסת לכנסת — דף הבית"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG, אין מה לאופטם */}
           <img
-            src="/logo.svg"
+            src="/logo-wordmark.svg"
             alt=""
-            className="h-8 w-auto"
+            className="h-7 w-auto"
           />
         </Link>
         <div className="flex-1" />
         {!isHome && <PeriodSelector />}
-        {!isHome && <GlobalSearch />}
+        {!isHome && <UnifiedSearch aiEnabled={aiEnabled} size="bar" className="w-36 sm:w-60 md:w-72" />}
         {/* Hamburger button — mobile only */}
         <button
           onClick={() => setMenuOpen(o => !o)}
@@ -359,9 +257,10 @@ export default function SiteHeader() {
         </button>
       </div>
 
-      {/* תפריט מובייל — מוזן מאותו מקור כמו הסיידבר, כולל הקיבוץ.
-           לפני זה היו כאן 7 קישורים שטוחים מול 10 מקובצים בדסקטופ, ולכן
-           פולס, מעקב חקיקה, אג'נדות ורשת קשרים לא היו נגישים במובייל כלל. */}
+      {/*
+        תפריט מובייל, מוזן מאותו מקור כמו הסיידבר: ראשי, הקבוצות,
+        ו"חדשים במשכן?". "שאל AI" ירד מכאן ומהסיידבר: תיבת החיפוש מכסה אותו.
+      */}
       {menuOpen && (
         <div
           id="mobile-nav"
@@ -369,38 +268,18 @@ export default function SiteHeader() {
           dir="rtl"
         >
           <nav className="px-4 py-3 flex flex-col gap-4" aria-label="ניווט ראשי">
+            <MobileLink link={HOME_LINK} pathname={pathname} onClick={closeMenu} />
             {NAV_GROUPS.map(({ group, links }) => (
               <div key={group}>
                 <p className="text-ui font-bold text-ink px-3 mb-1.5">{group}</p>
-                {links.map(link => {
-                  const active = isNavActive(pathname, link.prefixes);
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={closeMenu}
-                      aria-current={active ? "page" : undefined}
-                      className={`block text-ui py-2.5 px-3 rounded-control border-r-2 transition-colors ${
-                        active
-                          ? "bg-accent-wash text-accent-ink font-medium border-accent"
-                          : "text-ink-2 border-transparent hover:bg-surface-2"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })}
+                {links.map(link => (
+                  <MobileLink key={link.href} link={link} pathname={pathname} onClick={closeMenu} />
+                ))}
               </div>
             ))}
-            <Link
-              href={AI_LINK.href}
-              onClick={closeMenu}
-              aria-current={isNavActive(pathname, AI_LINK.prefixes) ? "page" : undefined}
-              className="flex items-center gap-2 text-ui font-medium py-2.5 px-3 rounded-control bg-accent-wash text-accent-ink"
-            >
-              <span aria-hidden="true">✦</span>
-              {AI_LINK.label}
-            </Link>
+            <div className="border-t border-line-soft pt-3">
+              <MobileLink link={FOOTER_LINK} pathname={pathname} onClick={closeMenu} />
+            </div>
           </nav>
         </div>
       )}

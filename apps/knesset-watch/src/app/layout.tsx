@@ -69,9 +69,9 @@ export default function RootLayout({
         </a>
         <PeriodProvider>
           <div className="flex min-h-screen" dir="rtl">
-            <AppSidebar aiEnabled={aiEnabled} />
+            <AppSidebar />
             <div className="flex-1 flex flex-col min-w-0">
-              <SiteHeader />
+              <SiteHeader aiEnabled={aiEnabled} />
               <main id="main" className="flex-1">{children}</main>
             </div>
           </div>

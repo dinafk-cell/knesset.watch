@@ -2,84 +2,76 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_GROUPS, AI_LINK, isNavActive } from '@/lib/nav';
+import { NAV_GROUPS, HOME_LINK, FOOTER_LINK, isNavActive, type NavLink } from '@/lib/nav';
 
-/** aiEnabled מגיע מ-layout: דגל שרת שמאפשר לכבות את פיצ׳רי ה-AI */
-export default function AppSidebar({ aiEnabled = true }: { aiEnabled?: boolean }) {
+/*
+  הסיידבר, לפי הצעת העיצוב: בהיר, על אותו קלף כמו העמוד, בלי קו מפריד.
+  ההפרדה מהתוכן עוברת דרך רווח ולא דרך צבע. הפריט הפעיל מסומן בפס נייבי
+  בצד ימין ובמשקל, לא בצבע בלבד.
+
+  הלוגו מופיע רק בעמודים הפנימיים: בעמוד הבית הוא יושב בהירו, ושני
+  לוגואים באותו מסך זה אחד יותר מדי. כשהפס העליון (לוגו + חיפוש) יעלה
+  לכל העמודים, הלוגו יעבור אליו וירד מכאן.
+
+  "שאל AI" ירד: תיבת החיפוש מכסה אותו, בעמוד הבית ובכותרת.
+*/
+
+function SideLink({ link, pathname, className = '' }: { link: NavLink; pathname: string; className?: string }) {
+  const active = isNavActive(pathname, link.prefixes);
+  return (
+    <Link
+      href={link.href}
+      aria-current={active ? 'page' : undefined}
+      className={`block leading-tight transition-colors ${
+        active
+          ? 'border-r-4 border-navy pr-[15px] font-bold text-ink'
+          : 'text-ink hover:text-accent'
+      } ${className}`}
+    >
+      {link.label}
+    </Link>
+  );
+}
+
+export default function AppSidebar() {
   const pathname = usePathname();
   if (pathname === '/login') return null;
+  const isHome = pathname === '/';
 
   return (
-    /*
-      הסיידבר כהה — נייבי על גוף בהיר. זה מה שמפריד בין הניווט לתוכן
-      בלי קו מפריד ובלי צל, ומשחרר את הזהב: על הנייבי הוא 6.8:1 ואפשר
-      להשתמש בו כטקסט, לא רק כגבול.
-    */
     <aside
-      className="hidden md:flex flex-col w-54 shrink-0 bg-navy-deep sticky top-0 h-screen overflow-y-auto"
-      data-surface="dark"
+      className="hidden md:flex flex-col gap-10 w-56 shrink-0 sticky top-0 h-screen overflow-y-auto px-10 py-10"
       dir="rtl"
     >
-      <div className="px-4 pt-5 pb-4 border-b border-white/10">
+      {!isHome && (
         <Link
           href="/"
-          className="flex flex-col items-center gap-2 rounded-control p-2 hover:bg-white/5 transition-colors"
-          aria-label="אפרכסת לכנסת — דף הבית"
+          className="block hover:opacity-70 transition-opacity"
+          aria-label="אפרכסת לכנסת - דף הבית"
         >
-          <img
-            src="/logo-mark-dark.png"
-            alt=""
-            className="h-16 w-auto"
-          />
-          {/* שתי המילים בשני צבעים, כמו בלוגו עצמו */}
-          <span className="font-content text-section font-bold text-white">
-            אפרכסת <span className="text-brand">לכנסת</span>
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG, אין מה לאופטם */}
+          <img src="/logo-wordmark.svg" alt="" className="h-7 w-auto" />
         </Link>
-      </div>
+      )}
 
-      <nav className="flex-1 px-2 py-4 space-y-6" aria-label="ניווט ראשי">
+      <nav className="flex-1 flex flex-col gap-10 text-body" aria-label="ניווט ראשי">
+        <SideLink link={HOME_LINK} pathname={pathname} />
         {NAV_GROUPS.map(({ group, links }) => (
-          <div key={group}>
-            {/* לעברית אין אותיות רישיות; הכותרת מסומנת במשקל ובלובן, לא ב-tracking */}
-            <p className="text-ui font-bold text-white px-2 mb-1.5">{group}</p>
-            {links.map(({ href, label, prefixes }) => {
-              const active = isNavActive(pathname, prefixes);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? 'page' : undefined}
-                  className={`flex items-center px-2 py-2 rounded-control text-ui border-r-2 transition-colors ${
-                    active
-                      ? 'bg-white/10 text-accent-lit font-medium border-accent-lit'
-                      : 'text-navy-mute border-transparent hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  {label}
-                </Link>
-              );
-            })}
+          <div key={group} className="flex flex-col gap-5">
+            {/* לעברית אין אותיות רישיות; הכותרת מסומנת במשקל, לא ב-tracking */}
+            <p className="font-bold text-ink">{group}</p>
+            {links.map(link => (
+              <SideLink key={link.href} link={link} pathname={pathname} />
+            ))}
           </div>
         ))}
       </nav>
 
-      {aiEnabled && (
-      <div className="px-2 pb-4 border-t border-white/10 pt-3">
-        <Link
-          href={AI_LINK.href}
-          aria-current={isNavActive(pathname, AI_LINK.prefixes) ? 'page' : undefined}
-          className={`flex items-center gap-2 px-2 py-2 rounded-control text-ui font-medium transition-colors ${
-            isNavActive(pathname, AI_LINK.prefixes)
-              ? 'bg-accent-lit text-navy-deep'
-              : 'text-accent-lit hover:bg-white/10'
-          }`}
-        >
-          <span aria-hidden="true">✦</span>
-          {AI_LINK.label}
-        </Link>
-      </div>
-      )}
+      <SideLink
+        link={FOOTER_LINK}
+        pathname={pathname}
+        className="text-ui underline decoration-dotted underline-offset-4"
+      />
     </aside>
   );
 }
