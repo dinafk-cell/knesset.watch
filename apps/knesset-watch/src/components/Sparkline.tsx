@@ -13,21 +13,28 @@ export function Sparkline({
   values,
   color,
   label,
+  bar = 3,
+  gap = 1.5,
+  height = 22,
 }: {
   values: number[];
   /** נבלע ל-currentColor כדי שהצבע ייקבע במחלקה של הכרטיס */
   color?: string;
   /** מה הסדרה סופרת, למשל "הצבעות" — נכנס לתיאור לקורא מסך */
   label: string;
+  /** מידות בפיקסלים. ברירת המחדל היא הגרף הזעיר; עמוד הבית מבקש גדול יותר. */
+  bar?: number;
+  gap?: number;
+  height?: number;
 }) {
   if (values.length < 2) return null;
 
   const max = Math.max(...values);
   if (max === 0) return null;
 
-  const BAR = 3;
-  const GAP = 1.5;
-  const H = 22;
+  const BAR = bar;
+  const GAP = gap;
+  const H = height;
   const width = values.length * BAR + (values.length - 1) * GAP;
 
   // החודש האחרון מול ממוצע התקופה — זה מה שנמסר במילים

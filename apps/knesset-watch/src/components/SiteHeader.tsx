@@ -311,9 +311,16 @@ export default function SiteHeader() {
 
   if (pathname === '/login') return null;
 
+  /*
+    בעמוד הבית ההירו מחליף את הכותרת: הלוגו והחיפוש יושבים בו, והמספרים
+    מקבלים פילטר תקופה משלהם. לכן בדסקטופ הכותרת לא מוצגת שם בכלל,
+    ובטלפון, שבו הסיידבר מוסתר, היא נשארת רק בשביל הלוגו וכפתור התפריט.
+  */
+  const isHome = pathname === '/';
+
   return (
     <header
-      className="sticky top-0 z-30 w-full bg-paper/90 backdrop-blur border-b border-line"
+      className={`sticky top-0 z-30 w-full bg-paper/90 backdrop-blur border-b border-line ${isHome ? 'md:hidden' : ''}`}
       dir="rtl"
     >
       <div className="px-4 h-11 flex items-center gap-4">
@@ -330,8 +337,8 @@ export default function SiteHeader() {
           />
         </Link>
         <div className="flex-1" />
-        <PeriodSelector />
-        <GlobalSearch />
+        {!isHome && <PeriodSelector />}
+        {!isHome && <GlobalSearch />}
         {/* Hamburger button — mobile only */}
         <button
           onClick={() => setMenuOpen(o => !o)}
