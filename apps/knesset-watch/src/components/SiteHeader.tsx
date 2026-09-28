@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePeriod, PERIOD_SHORTCUTS, periodLabel } from '@/lib/period-context';
 import { NAV_GROUPS, HOME_LINK, FOOTER_LINK, isNavActive, type NavLink } from '@/lib/nav';
-import { UnifiedSearch } from '@/components/UnifiedSearch';
 
 // ── Calendar helpers ──────────────────────────────────────────────────────────
 
@@ -176,7 +175,7 @@ function PeriodSelector() {
 
 
 /** פריט בתפריט המובייל. אותו סימון פעיל כמו בסיידבר, בגרסה של רשימה. */
-function MobileLink({ link, pathname, onClick, className = '' }: { link: NavLink; pathname: string; onClick: () => void; className?: string }) {
+function MobileLink({ link, pathname, onClick }: { link: NavLink; pathname: string; onClick: () => void }) {
   const active = isNavActive(pathname, link.prefixes);
   return (
     <Link
@@ -187,15 +186,21 @@ function MobileLink({ link, pathname, onClick, className = '' }: { link: NavLink
         active
           ? 'bg-accent-wash text-accent-ink font-medium border-accent'
           : 'text-ink-2 border-transparent hover:bg-surface-2'
-      } ${className}`}
+      }`}
     >
       {link.label}
     </Link>
   );
 }
 
-/** aiEnabled מגיע מ-layout: דגל שרת שמאפשר לכבות את פיצ'רי ה-AI */
-export default function SiteHeader({ aiEnabled = true }: { aiEnabled?: boolean }) {
+/**
+ * שני מצבים, כי ההירו (לוגו + חיפוש) יושב עכשיו בכל עמוד, מעל הסיידבר:
+ *   top      הפס של הטלפון, מעל ההירו: כפתור התפריט, והפילטר בעמודים הפנימיים.
+ *   default  הפס של הדסקטופ בעמודים הפנימיים, בתוך עמודת התוכן: הפילטר בלבד.
+ *            בעמוד הבית אין אותו, כי למספרים שם יש פילטר משלהם.
+ * החיפוש שהיה כאן ירד: תיבת החיפוש המאוחדת בהירו מכסה אותו.
+ */
+export default function SiteHeader({ mode = 'default' }: { mode?: 'top' | 'default' }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -207,64 +212,47 @@ export default function SiteHeader({ aiEnabled = true }: { aiEnabled?: boolean }
   }, [pathname, closeMenu]);
 
   if (pathname === '/login') return null;
-
-  /*
-    בעמוד הבית ההירו מחליף את הכותרת: הלוגו והחיפוש יושבים בו, והמספרים
-    מקבלים פילטר תקופה משלהם. לכן בדסקטופ הכותרת לא מוצגת שם בכלל,
-    ובטלפון, שבו הסיידבר מוסתר, היא נשארת רק בשביל הלוגו וכפתור התפריט.
-  */
   const isHome = pathname === '/';
+  if (mode === 'default' && isHome) return null;
+  const top = mode === 'top';
 
   return (
     <header
-      className={`sticky top-0 z-30 w-full bg-paper/90 backdrop-blur border-b border-line ${isHome ? 'md:hidden' : ''}`}
+      className={`sticky top-0 z-30 w-full bg-paper/90 backdrop-blur border-b border-line ${top ? 'md:hidden' : 'hidden md:block'}`}
       dir="rtl"
     >
       <div className="px-4 h-11 flex items-center gap-4">
-        {/* Logo — mobile only (desktop shows in sidebar) */}
-        <Link
-          href="/"
-          className="md:hidden flex items-center justify-center shrink-0 hover:opacity-70 transition-opacity"
-          aria-label="אפרכסת לכנסת — דף הבית"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- SVG, אין מה לאופטם */}
-          <img
-            src="/logo-wordmark.svg"
-            alt=""
-            className="h-7 w-auto"
-          />
-        </Link>
         <div className="flex-1" />
         {!isHome && <PeriodSelector />}
-        {!isHome && <UnifiedSearch aiEnabled={aiEnabled} size="bar" className="w-36 sm:w-60 md:w-72" />}
-        {/* Hamburger button — mobile only */}
-        <button
-          onClick={() => setMenuOpen(o => !o)}
-          className="md:hidden flex items-center justify-center w-9 h-9 rounded-control hover:bg-surface-2 transition-colors shrink-0"
-          aria-label={menuOpen ? 'סגור תפריט' : 'פתח תפריט'}
-          aria-expanded={menuOpen}
-          aria-controls="mobile-nav"
-        >
-          {menuOpen ? (
-            <svg className="w-5 h-5 text-ink-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M4 4l12 12M16 4L4 16"/>
-            </svg>
-          ) : (
-            <svg className="w-5 h-5 text-ink-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M3 5h14M3 10h14M3 15h14"/>
-            </svg>
-          )}
-        </button>
+        {top && (
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="flex items-center justify-center w-9 h-9 rounded-control hover:bg-surface-2 transition-colors shrink-0"
+            aria-label={menuOpen ? 'סגור תפריט' : 'פתח תפריט'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+          >
+            {menuOpen ? (
+              <svg className="w-5 h-5 text-ink-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M4 4l12 12M16 4L4 16"/>
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-ink-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M3 5h14M3 10h14M3 15h14"/>
+              </svg>
+            )}
+          </button>
+        )}
       </div>
 
       {/*
         תפריט מובייל, מוזן מאותו מקור כמו הסיידבר: ראשי, הקבוצות,
-        ו"חדשים במשכן?". "שאל AI" ירד מכאן ומהסיידבר: תיבת החיפוש מכסה אותו.
+        ו"חדשים במשכן?". "שאל AI" ירד מכאן ומהסיידבר: תיבת החיפוש בהירו מכסה אותו.
       */}
-      {menuOpen && (
+      {top && menuOpen && (
         <div
           id="mobile-nav"
-          className="md:hidden border-t border-line bg-surface"
+          className="border-t border-line bg-surface"
           dir="rtl"
         >
           <nav className="px-4 py-3 flex flex-col gap-4" aria-label="ניווט ראשי">

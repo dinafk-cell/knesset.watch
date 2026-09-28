@@ -3,6 +3,7 @@ import { Rubik, Assistant } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import AppSidebar from "@/components/AppSidebar";
+import { SiteHero } from "@/components/SiteHero";
 import { PeriodProvider } from "@/lib/period-context";
 import { aiFeaturesEnabled } from "@/lib/feature-flags";
 
@@ -68,10 +69,16 @@ export default function RootLayout({
           דלגי לתוכן הראשי
         </a>
         <PeriodProvider>
+          {/*
+            ההירו (איור, לוגו, חיפוש + AI) יושב בכל עמוד, מעל שורת הסיידבר
+            והתוכן ועל כל הרוחב. בטלפון פס התפריט יושב מעליו.
+          */}
+          <SiteHeader mode="top" />
+          <SiteHero aiEnabled={aiEnabled} />
           <div className="flex min-h-screen" dir="rtl">
             <AppSidebar />
             <div className="flex-1 flex flex-col min-w-0">
-              <SiteHeader aiEnabled={aiEnabled} />
+              <SiteHeader />
               <main id="main" className="flex-1">{children}</main>
             </div>
           </div>

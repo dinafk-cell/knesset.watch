@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { periodToDateRange, type Period } from '@/lib/period-context';
-import { HomeHero } from '@/components/home/HomeHero';
 import { HomeQuestionnaire } from '@/components/home/HomeQuestionnaire';
 import { StatsBlock, type HomeStats } from '@/components/home/StatsBlock';
 import { RecentLaws, type RecentBill } from '@/components/home/RecentLaws';
@@ -24,8 +23,7 @@ import { RecentLaws, type RecentBill } from '@/components/home/RecentLaws';
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
-/** aiEnabled מגיע מ-page: דגל שרת שמאפשר לכבות את פיצ'רי ה-AI */
-export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boolean }) {
+export default function HomepageClient() {
   const [period, setPeriod] = useState<Period>('all');
   const [stats, setStats] = useState<HomeStats | null>(null);
   const [recentBills, setRecentBills] = useState<RecentBill[]>([]);
@@ -55,8 +53,7 @@ export default function HomepageClient({ aiEnabled = true }: { aiEnabled?: boole
 
   return (
     <div className="min-h-screen pb-20" dir="rtl">
-      <HomeHero aiEnabled={aiEnabled} />
-
+      {/* ההירו מגיע מהסלוט app/@hero, מעל הסיידבר; כאן מתחיל התוכן */}
       <div className="mx-auto max-w-[900px] px-6 pt-8 md:pt-10 flex flex-col gap-16 md:gap-20">
         <HomeQuestionnaire />
         <StatsBlock
