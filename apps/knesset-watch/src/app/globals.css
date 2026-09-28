@@ -93,12 +93,13 @@
   /* ── טיפוגרפיה ───────────────────────────────────────────────────────── */
 
   /* ממשק וגוף התוכן — כל מה שקוראים */
-  --font-sans:    var(--font-assistant), "Segoe UI", "Arial Hebrew", system-ui, sans-serif;
+  --font-sans:    var(--font-heebo), "Segoe UI", "Arial Hebrew", system-ui, sans-serif;
   /*
-    כותרות. הטוקן נקרא display ולא serif כי הוא כבר לא סריף —
-    ההיררכיה עוברת עכשיו דרך משקל וגודל, לא דרך ניגוד משפחות.
+    כותרות. sans ו-display מצביעים עכשיו על אותה משפחה (Heebo), וההיררכיה
+    עוברת דרך משקל וגודל בלבד. הטוקן נשאר נפרד כדי שאפשר יהיה להפריד
+    שוב בין כותרות לגוף בלי לגעת באף רכיב.
   */
-  --font-display: var(--font-rubik), "Segoe UI", "Arial Hebrew", system-ui, sans-serif;
+  --font-display: var(--font-heebo), "Segoe UI", "Arial Hebrew", system-ui, sans-serif;
   /* תאימות לאחור: font-serif ו-.font-content ממופים ל-display */
   --font-serif:   var(--font-display);
 

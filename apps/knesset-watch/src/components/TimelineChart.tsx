@@ -63,7 +63,7 @@ export default function TimelineChart({ data }: TimelineChartProps) {
               borderRadius: '0.75rem',
               border: `1px solid ${COLOR.line}`,
               background: COLOR.surface,
-              fontFamily: 'var(--font-assistant)',
+              fontFamily: 'var(--font-sans)',
               fontSize: '13px',
               textAlign: 'right',
               direction: 'rtl',
@@ -71,7 +71,7 @@ export default function TimelineChart({ data }: TimelineChartProps) {
             itemStyle={{ fontWeight: 500 }}
           />
           {/* משקל 900 על עברית קטנה סותם את האותיות; 500 מספיק לתווית */}
-          <Legend wrapperStyle={{ fontFamily: 'var(--font-assistant)', fontSize: '12.5px', fontWeight: 500 }} />
+          <Legend wrapperStyle={{ fontFamily: 'var(--font-sans)', fontSize: '12.5px', fontWeight: 500 }} />
           {keys.map(agenda => (
             <Bar key={agenda} dataKey={agenda} stackId="a" fill={TOPIC_COLOR[agenda] ?? TOPIC_FALLBACK} />
           ))}
