@@ -2,11 +2,16 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { UnifiedSearch } from '@/components/UnifiedSearch';
 
 /*
-  ההירו של עמוד הבית: איור, לוגו, מה האתר עושה, ותיבת החיפוש המאוחדת.
+  ההירו של האתר: איור, לוגו, ותיבת החיפוש המאוחדת (חיפוש + AI).
+
+  הוא יושב בכל עמוד, מעל הסיידבר והתוכן ועל כל הרוחב. בעמוד הבית הוא
+  מלא: גם הפסקה שמסבירה מה האתר עושה, וההפניה למי שחדש כאן. בעמודים
+  הפנימיים הוא קומפקטי: איור, לוגו וחיפוש בלבד, כדי שהתוכן לא יידחק
+  למטה. הלוגו והחיפוש חיים רק כאן, ולכן הכותרת והסיידבר לא צריכים אותם.
 
   קודם עמד כאן בלוק כהה עם שם האתר בגדול. השם כבר יושב בלוגו שלידו,
   ותת-הכותרת ("כל הנתונים במקום אחד") לא אמרה למבקר מה לעשות. עכשיו
@@ -31,11 +36,17 @@ const EXAMPLE_QUESTIONS = [
   'אילו הצעות חוק הוגשו בנושא הביטחון השנה?',
 ];
 
-export function HomeHero({ aiEnabled }: { aiEnabled: boolean }) {
+export function SiteHero({ aiEnabled }: { aiEnabled: boolean }) {
+  const pathname = usePathname();
   const router = useRouter();
+  if (pathname === '/login') return null;
+  const full = pathname === '/';
 
   return (
-    <section className="relative overflow-hidden min-h-[440px] md:min-h-[540px]" aria-label="פתיחה">
+    <section
+      className={`relative overflow-hidden ${full ? 'min-h-[440px] md:min-h-[540px]' : 'min-h-[280px] md:min-h-[340px]'}`}
+      aria-label="פתיחה"
+    >
       {/* הרקע: האיור + דעיכה לקלף. aria-hidden כי הוא קישוט, לא מידע. */}
       <div className="absolute inset-0" aria-hidden="true">
         <Image
@@ -49,7 +60,7 @@ export function HomeHero({ aiEnabled }: { aiEnabled: boolean }) {
         <div className="absolute inset-0 bg-linear-to-b from-transparent from-30% to-paper" />
       </div>
 
-      <div className="relative mx-auto max-w-[900px] px-6 pb-12 md:pb-16 flex flex-col">
+      <div className={`relative mx-auto max-w-[900px] px-6 flex flex-col ${full ? 'pb-12 md:pb-16' : 'pb-8 md:pb-10'}`}>
         {/* הלוגו תלוי מהקצה העליון, כמו בעיצוב */}
         <div className="flex justify-center">
           <Link
@@ -62,14 +73,25 @@ export function HomeHero({ aiEnabled }: { aiEnabled: boolean }) {
           </Link>
         </div>
 
-        <p className="mt-10 md:mt-14 max-w-[440px] text-ui md:text-[15px] font-semibold leading-relaxed text-ink">
-          אפרכסת לכנסת עוקבת אחרי מה שחברי הכנסת עושים בפועל: איך הצביעו, אילו
-          חוקים יזמו ובאילו ועדות השתתפו. הכול מתוך הנתונים הרשמיים של הכנסת,
-          ובשפה פשוטה. בשלב זה, כל הנתונים באתר הם של הכנסת ה-25, מאז שהושבעה
-          בנובמבר 2022.
-        </p>
+        {full && (
+          <>
+            <p className="mt-10 md:mt-14 max-w-[440px] text-ui md:text-[15px] font-semibold leading-relaxed text-ink">
+              אפרכסת לכנסת עוקבת אחרי מה שחברי הכנסת עושים בפועל: איך הצביעו, אילו
+              חוקים יזמו ובאילו ועדות השתתפו. הכול מתוך הנתונים הרשמיים של הכנסת,
+              ובשפה פשוטה. בשלב זה, כל הנתונים באתר הם של הכנסת ה-25, מאז שהושבעה
+              בנובמבר 2022.
+            </p>
+            {/* למי שחדש: מוביל בינתיים ל"הידעת?", עד שעמוד "חדשים במשכן?" ייבנה */}
+            <Link
+              href="/did-you-know"
+              className="mt-2 self-start max-w-[440px] text-ui md:text-[15px] font-semibold leading-relaxed text-ink underline underline-offset-4 hover:text-accent transition-colors"
+            >
+              פעם ראשונה באתר? לא ברור לכם כיצד לקרוא את הנתונים?
+            </Link>
+          </>
+        )}
 
-        <UnifiedSearch aiEnabled={aiEnabled} size="hero" className="mt-8 md:mt-10" />
+        <UnifiedSearch aiEnabled={aiEnabled} size="hero" className={full ? 'mt-8 md:mt-10' : 'mt-6 md:mt-8'} />
 
         {aiEnabled && (
           <ul className="mt-5 flex flex-wrap justify-center gap-2" aria-label="שאלות לדוגמה">
