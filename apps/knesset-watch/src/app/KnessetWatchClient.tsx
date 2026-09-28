@@ -464,7 +464,12 @@ export default function KnessetWatchPage() {
       if (activeOnly) params.set('activeOnly', 'true');
       if (search) params.set('search', search);
       if (groupBy !== 'mk') params.set('groupBy', groupBy);
-      const newUrl = params.toString() ? `?${params.toString()}` : '/';
+      /*
+        הבסיס הוא המסלול הנוכחי ולא '/': הרכיב הזה היה פעם עמוד הבית, ובלי
+        פילטרים הוא כתב '/' לשורת הכתובת גם כשהוא מוצג ב-/mks. הכותרת
+        והסיידבר קוראים את המסלול, ולכן /mks נראה להם כמו עמוד הבית.
+      */
+      const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }, 300);
     return () => clearTimeout(timer);
