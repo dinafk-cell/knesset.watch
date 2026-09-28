@@ -381,7 +381,7 @@ Get auth token:
 ```bash
 TOKEN=$(curl -s -X POST "https://knesset.watch/api/auth" \
   -H "Content-Type: application/json" \
-  -d '{"password":"Pixelbilbo26"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+  -d '{"password":"<SITE_PASSWORD from Vercel env vars>"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 ```
 
 Run 10 test queries:

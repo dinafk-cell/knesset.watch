@@ -5,5 +5,5 @@
  */
 
 export function aiFeaturesEnabled(): boolean {
-  return process.env.AI_FEATURES_ENABLED !== 'false';
+  return process.env.AI_FEATURES_ENABLED === 'true';
 }

@@ -17,7 +17,7 @@ This project provides a minimalist dashboard for Israeli Knesset data (MKs, bill
 - **MK Cards**: Fully functional locally. Displays "Proposed" and "Passed" counts.
 - **Pulse POC**: Active at `/knesset-watch/pulse`, showing legislation from the last 30 days.
 - **Track Record**: Active at `/knesset-watch/track-record`, showing individual MK legislative history and conversion rates.
-- **Security**: Password gate is active. Default password is `Pixelbilbo26` (normalized to lowercase).
+- **Security**: Password gate is active. Password is set via `SITE_PASSWORD` in Vercel env vars (never write the real value into a tracked file — this repo is public).
 
 ## TODO List
 1. **Verify Live Deployment**: Manually check the production URL once the Vercel SSO gate is passed. Ensure stats cards render correctly.
