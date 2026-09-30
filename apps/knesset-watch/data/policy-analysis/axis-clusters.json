@@ -9,14 +9,7 @@
         "originalKeyword": "החמרת ענישה פלילית",
         "subtopic": "משפט פלילי, ענישה ואכיפה",
         "question": "יש להחמיר את הענישה הפלילית על עבירות חמורות.",
-        "billCount": 290
-      },
-      {
-        "issueId": "ax_fdc1475368",
-        "originalKeyword": "עונשי מינימום לפשיעה",
-        "subtopic": "משפט פלילי, ענישה ואכיפה",
-        "question": "יש להחמיר ענישה ולקבוע עונשי מינימום.",
-        "billCount": 279
+        "billCount": 516
       },
       {
         "issueId": "ax_25f6364cab",
@@ -75,7 +68,7 @@
         "billCount": 5
       }
     ],
-    "billCount": 899
+    "billCount": 846
   },
   {
     "clusterId": "cl_000",
@@ -137,14 +130,14 @@
         "originalKeyword": "סבסוד שירותי בריאות",
         "subtopic": "מערכת הבריאות ושירותים רפואיים",
         "question": "יש להרחיב מימון ציבורי, כיסוי וזמינות של שירותים וטיפולים רפואיים.",
-        "billCount": 162
+        "billCount": 190
       },
       {
         "issueId": "ax_a1e872c1ff",
         "originalKeyword": "פיקוח מערכת הבריאות",
         "subtopic": "מערכת הבריאות ושירותים רפואיים",
         "question": "יש להחמיר את הפיקוח והרגולציה במערכת הבריאות.",
-        "billCount": 101
+        "billCount": 136
       },
       {
         "issueId": "ax_0ef569cbfd",
@@ -152,20 +145,6 @@
         "subtopic": "מערכת הבריאות ושירותים רפואיים",
         "question": "יש לאפשר טיפולים רפואיים עצמאיים לפי שיקול דעת הפרט.",
         "billCount": 49
-      },
-      {
-        "issueId": "ax_597feede1e",
-        "originalKeyword": "רגולציה במערכת הבריאות",
-        "subtopic": "מערכת הבריאות ושירותים רפואיים",
-        "question": "יש להקל בדרישות הרגולטוריות במערכת הבריאות.",
-        "billCount": 46
-      },
-      {
-        "issueId": "ax_b270ff3560",
-        "originalKeyword": "הוצאות מטופלים",
-        "subtopic": "הוצאה ישירה של מטופלים",
-        "question": "יש להפחית הוצאות ישירות של מטופלים על טיפול רפואי.",
-        "billCount": 34
       },
       {
         "issueId": "ax_a8cfe3b4e4",
@@ -182,7 +161,7 @@
         "billCount": 8
       }
     ],
-    "billCount": 432
+    "billCount": 415
   },
   {
     "clusterId": "cl_007",
@@ -330,7 +309,7 @@
         "originalKeyword": "הגדלת קצבאות הרווחה",
         "subtopic": "רווחה, עוני וסיוע חברתי",
         "question": "יש להגדיל את התמיכה הכלכלית הישירה והקצבאות.",
-        "billCount": 133
+        "billCount": 141
       },
       {
         "issueId": "ax_4c8559c3a5",
@@ -345,13 +324,6 @@
         "subtopic": "רווחה, עוני וסיוע חברתי",
         "question": "יש לתעדף הטבות למי שמשרתים בשירות צבאי או אזרחי.",
         "billCount": 19
-      },
-      {
-        "issueId": "ax_958f04e784",
-        "originalKeyword": "סיוע לאוכלוסיות פגיעות",
-        "subtopic": "אנשים עם מוגבלות",
-        "question": "יש להרחיב תמיכה כלכלית באוכלוסיות פגיעות.",
-        "billCount": 8
       },
       {
         "issueId": "ax_44883d350e",
@@ -594,7 +566,7 @@
         "originalKeyword": "הגנת צרכנים",
         "subtopic": "הגנת הצרכן ומסחר",
         "question": "יש להרחיב חובות גילוי, סימון והגינות על עסקים להגנת הצרכן.",
-        "billCount": 177
+        "billCount": 199
       },
       {
         "issueId": "ax_07835c2e84",
@@ -602,16 +574,9 @@
         "subtopic": "יוקר המחיה וצרכנות",
         "question": "יש להרחיב פיקוח ממשלתי על מחירי מוצרים ושירותים.",
         "billCount": 39
-      },
-      {
-        "issueId": "ax_eb27cc354e",
-        "originalKeyword": "רגולציה ושקיפות עסקית",
-        "subtopic": "יוקר המחיה וצרכנות",
-        "question": "יש להטיל חובות רגולציה ושקיפות על עסקים.",
-        "billCount": 25
       }
     ],
-    "billCount": 241
+    "billCount": 238
   },
   {
     "clusterId": "cl_019",
@@ -909,14 +874,7 @@
         "originalKeyword": "הנצחה ממלכתית (תרבות, מורשת והנצחה)",
         "subtopic": "תרבות, מורשת והנצחה",
         "question": "יש להקים ולתקצב רשויות ממלכתיות וימי זיכרון להנצחת קהילות ואישים.",
-        "billCount": 83
-      },
-      {
-        "issueId": "ax_4a0f6a172d",
-        "originalKeyword": "הנצחה ממלכתית",
-        "subtopic": "תקשורת ושידור",
-        "question": "יש להרחיב הנצחה והכרה ממלכתית בקבוצות ובאירועים.",
-        "billCount": 66
+        "billCount": 145
       },
       {
         "issueId": "ax_5b54592c22",
@@ -926,7 +884,7 @@
         "billCount": 37
       }
     ],
-    "billCount": 186
+    "billCount": 182
   },
   {
     "clusterId": "cl_013",
@@ -1009,7 +967,7 @@
         "originalKeyword": "פיקוח פרלמנטרי",
         "subtopic": "הכנסת והליך החקיקה",
         "question": "יש לחזק את הפיקוח הפרלמנטרי ולהעניק לוועדות הכנסת סמכויות אכיפה.",
-        "billCount": 83
+        "billCount": 104
       },
       {
         "issueId": "ax_a7c5d64455",
@@ -1017,13 +975,6 @@
         "subtopic": "הכנסת והליך החקיקה",
         "question": "יש להקשיח את תנאי פיזור הכנסת והדחת הממשלה.",
         "billCount": 39
-      },
-      {
-        "issueId": "ax_c787393d8f",
-        "originalKeyword": "הליך החקיקה",
-        "subtopic": "הכנסת והליך החקיקה",
-        "question": "יש לחזק את הפיקוח הפרלמנטרי על הרשות המבצעת.",
-        "billCount": 27
       },
       {
         "issueId": "ax_682c310d89",
@@ -1047,7 +998,7 @@
         "billCount": 8
       }
     ],
-    "billCount": 180
+    "billCount": 174
   },
   {
     "clusterId": "cl_031",
@@ -1274,14 +1225,7 @@
         "originalKeyword": "אכיפה ופרטיות",
         "subtopic": "פרטיות, מידע וזכויות דיגיטליות",
         "question": "יש להרחיב את סמכויות האכיפה והביטחון על חשבון הפרטיות.",
-        "billCount": 81
-      },
-      {
-        "issueId": "ax_432fd4e36c",
-        "originalKeyword": "איסוף מידע אישי",
-        "subtopic": "פרטיות, מידע וזכויות דיגיטליות",
-        "question": "יש לאפשר לרשויות איסוף וריכוז מידע אישי.",
-        "billCount": 44
+        "billCount": 122
       },
       {
         "issueId": "ax_7418c6777d",
@@ -1291,7 +1235,7 @@
         "billCount": 15
       }
     ],
-    "billCount": 140
+    "billCount": 137
   },
   {
     "clusterId": "cl_001",
@@ -1368,7 +1312,7 @@
         "originalKeyword": "ביטול חוקים בבג״ץ",
         "subtopic": "חוקה, חוקי יסוד וביקורת שיפוטית",
         "question": "יש להגביל את סמכות בית המשפט לבטל חוקים.",
-        "billCount": 30
+        "billCount": 38
       },
       {
         "issueId": "ax_e17e03566c",
@@ -1385,13 +1329,6 @@
         "billCount": 13
       },
       {
-        "issueId": "ax_63daad0a32",
-        "originalKeyword": "התערבות בהחלטות ממשל",
-        "subtopic": "חוקה, חוקי יסוד וביקורת שיפוטית",
-        "question": "יש להגביל את סמכות בית המשפט להתערב בחקיקה והחלטות ממשל.",
-        "billCount": 12
-      },
-      {
         "issueId": "ax_da45b5c8fe",
         "originalKeyword": "מגבלות על מחאות",
         "subtopic": "מחאה ופרטיות",
@@ -1406,7 +1343,7 @@
         "billCount": 10
       }
     ],
-    "billCount": 127
+    "billCount": 123
   },
   {
     "clusterId": "cl_004",
@@ -1717,17 +1654,10 @@
         "originalKeyword": "סבל בעלי חיים",
         "subtopic": "בעלי חיים",
         "question": "יש להחמיר הגבלות על פעולות הגורמות סבל לבעלי חיים.",
-        "billCount": 36
-      },
-      {
-        "issueId": "ax_bd07feaae6",
-        "originalKeyword": "בעלי חיים",
-        "subtopic": "בעלי חיים",
-        "question": "יש להרחיב את סמכויות הפיקוח וההגנה על בעלי חיים.",
-        "billCount": 29
+        "billCount": 64
       }
     ],
-    "billCount": 65
+    "billCount": 64
   },
   {
     "clusterId": "cl_046",
