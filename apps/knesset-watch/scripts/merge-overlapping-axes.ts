@@ -36,7 +36,19 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), 'knesset.db');
+/**
+ * --db=knesset-deploy.db חייב לרוץ גם הוא.
+ *
+ * הפרודקשן אינו קורא את knesset.db אלא את knesset-deploy.db, קובץ נפרד
+ * שנמצא בגיט. בלי הרצה שנייה עליו השאלון היה מציג 210 היגדים בעוד
+ * הדירוג מחושב על הסיווגים הישנים — לא קריסה, אלא מספרים שגויים בשקט.
+ *
+ * קובצי ה-JSON מתעדכנים רק בהרצה על המסד הראשי, כדי שלא ייכתבו פעמיים.
+ */
+const DB_ARG = process.argv.find(a => a.startsWith('--db='));
+const DB_FILE = DB_ARG ? DB_ARG.split('=')[1] : 'knesset.db';
+const DB_PATH = path.join(process.cwd(), DB_FILE);
+const IS_PRIMARY = DB_FILE === 'knesset.db';
 const DATA_DIR = path.join(process.cwd(), 'data', 'policy-analysis');
 const DRY = process.argv.includes('--dry');
 
@@ -97,7 +109,7 @@ function suffixOf(stanceId: string | null): 'pro' | 'con' | null {
 }
 
 function run() {
-  console.log(`${DRY ? 'הרצה יבשה' : 'ביצוע'} · ${MERGES.length} מיזוגים\n`);
+  console.log(`${DRY ? 'הרצה יבשה' : 'ביצוע'} · ${MERGES.length} מיזוגים · ${DB_FILE}\n`);
   resolveExceptions();
   console.log('');
 
@@ -174,6 +186,11 @@ function run() {
 
   if (DRY) {
     console.log('\nהרצה יבשה — לא נכתב דבר.');
+    return;
+  }
+
+  if (!IS_PRIMARY) {
+    console.log(`\n${DB_FILE} עודכן. קובצי ה-JSON לא נגעו — הם מתעדכנים רק בהרצה על המסד הראשי.`);
     return;
   }
 
